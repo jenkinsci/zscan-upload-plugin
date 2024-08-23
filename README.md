@@ -1,5 +1,5 @@
 # zscan-jenkins-plugin
-Jankins plugin to upload builds to zScan for analysis. 
+Jenkins plugin to upload builds to zScan for analysis. 
 
 ## Pre-requisites
 
