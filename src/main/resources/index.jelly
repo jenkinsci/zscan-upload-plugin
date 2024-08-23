@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin uploads build artifacts to zScan for app analysis.
+</div>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <!-- Inspired by: https://github.com/jenkinsci/bom -->
+                <groupId>io.jenkins.tools.bom</groupId>
+                <!--
+                    The version in the artifactId is related to the jenkins.version given later.
+                    We have jenkins.version = 2.387.3, so we use `bom-2.387.x`.
+                    The not-very-obvious `version` value is found in this table:
+                    https://github.com/jenkinsci/bom?tab=readme-ov-file#depending-on-older-versions
+                -->
+                <artifactId>bom-2.387.x</artifactId>
+                <version>2543.vfb_1a_5fb_9496d</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.retrofit2</groupId>
+            <artifactId>retrofit</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.retrofit2</groupId>
+            <artifactId>converter-gson</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+    </dependencies>
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <!-- See https://github.com/jenkinsci/plugin-pom/releases for available versions -->
+        <version>4.82</version>
+        <relativePath />
+    </parent>
+    <groupId>io.jenkins.plugins</groupId>
+    <artifactId>zScanJenkinsUploadPlugin</artifactId>
+    <version>2.0.0</version>
+    <packaging>hpi</packaging>
+    <properties>
+        <!--
+            Take a look at the developer documentation for the baseline version to use
+            https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/#currently-recommended-versions
+            eg: 2.387.3 is reasonable when you need older LTS version that doesn't
+                have too many detached plugins.
+                2.414.3 and 2.426.3 make good core dependencies. 
+                2.440.1 if you need, say, newer features
+            The 2.xxx.1 are the first release of a given line
+            The 2.xxx.3 are typically the last releases of a given line
+            2.387.2 is the oldest LTS currently supported by the Jenkins update center.
+        -->
+        <jenkins.version>2.387.3</jenkins.version>
+    </properties>
+    <name>Upload to zScan Plugin</name>
+    <description>This plugin uploads build artifacts to zScan for app analysis</description>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+    <!-- Assuming you want to host on @jenkinsci:
+    <url>https://wiki.jenkins.io/display/JENKINS/TODO+Plugin</url>
+    <scm>
+        <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
+    </scm>
+    -->
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>
