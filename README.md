@@ -4,9 +4,6 @@ Jenkins plugin to upload builds to zScan for analysis.
 ## Pre-requisites
 
 This project requires Java 11 or higher to build. All of the 3rd-party jars we're using are compiled with Java 17.  
-Java 8 has reached EOL; LTS for Java 11 ended around September/November 2023. We should be using Java 17 or later.
-For backward-compatibility, Java 11 works for now. 
-
 
 In your console, head over to the Authorizations tab in the Manage section and generate a new API key that at least has the scope to `upload z3a_builds`.
 

@@ -26,7 +26,6 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -54,7 +53,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     }
 
     @Override
-    public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+    public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         final PrintStream console = listener.getLogger();
 
         if (Result.ABORTED.equals(run.getResult())) {
@@ -105,6 +104,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                     return;
                 }
 
+                @SuppressWarnings("null") // there's a null check above
                 String accessToken = response.body().getAccessToken();
                 String authToken = "Bearer " + accessToken;
 
@@ -157,6 +157,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             load();
         }
 
+        @SuppressWarnings("rawtypes")
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
