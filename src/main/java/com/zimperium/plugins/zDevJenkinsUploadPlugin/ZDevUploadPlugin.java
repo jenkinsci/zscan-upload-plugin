@@ -72,10 +72,10 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public String clientSecret;
 
     // optional
-    public Boolean waitForReport;
-    public String reportFormat;
-    public String reportFileName;
-    public String teamName;   
+    private Boolean waitForReport;
+    private String reportFormat;
+    private String reportFileName;
+    private String teamName;   
 
     @DataBoundConstructor
     public ZDevUploadPlugin(String sourceFile, String excludedFile, String endpoint, String clientId, String clientSecret) {
@@ -86,7 +86,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         this.clientSecret = clientSecret;
 
         this.waitForReport = false;
-        this.reportFormat = new String("json");
+        this.reportFormat = "sarif";
         this.reportFileName = DEFAULT_REPORT_FILE;
         this.teamName = DEFAULT_TEAM_NAME; 
     }
@@ -96,9 +96,17 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         this.waitForReport = waitForReport;
     }
 
+    public Boolean getWaitForReport() {
+        return waitForReport;
+    }
+
     @DataBoundSetter
     public void setReportFormat(String reportFormat) {
         this.reportFormat = reportFormat;
+    }
+
+    public String getReportFormat() {
+        return reportFormat;
     }
 
     @DataBoundSetter
@@ -106,9 +114,17 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         this.reportFileName = reportFileName;
     }
 
+    public String getReportFileName() {
+        return reportFileName;
+    }
+
     @DataBoundSetter
     public void setTeamName(String teamName) {
         this.teamName = teamName;
+    }
+
+    public String getTeamName() {
+        return teamName;
     }
 
     private void log(final PrintStream logger, final String message) {
@@ -212,9 +228,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         JsonObject jsonObject = JsonParser.parseString(uploadResponseBody.string()).getAsJsonObject();
 
                         // Extract the appId needed for team assignment, buildId to check report status, and the current team 
-                        String zdevAppId = (jsonObject.get("zdevAppId").isJsonNull()) ? new String ("") : jsonObject.get("zdevAppId").getAsString();
-                        String teamId = (jsonObject.get("teamId").isJsonNull()) ? new String ("") : jsonObject.get("teamId").getAsString();
-                        String buildId = (jsonObject.get("buildId").isJsonNull()) ? new String ("") : jsonObject.get("buildId").getAsString();
+                        String zdevAppId = (jsonObject.get("zdevAppId").isJsonNull()) ? "" : jsonObject.get("zdevAppId").getAsString();
+                        String teamId = (jsonObject.get("teamId").isJsonNull()) ? "" : jsonObject.get("teamId").getAsString();
+                        String buildId = (jsonObject.get("buildId").isJsonNull()) ? "" : jsonObject.get("buildId").getAsString();
 
                         // If teamID is empty, find the correct team id by name
                         if(teamId.isEmpty()) {
@@ -280,8 +296,11 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                     }
                                 }
                             }
-                            catch(NullPointerException e) {
-                                log(console, "Error processing team list.");
+                            catch(RuntimeException e) {
+                                throw e;
+                            }
+                            catch(Exception e) {
+                                log(console, "Error processing team list: " + e.getLocalizedMessage());
                                 run.setResult(Result.UNSTABLE);
                             }
                         }
@@ -323,6 +342,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                                             if(scanStatus.equals("Done")) {
                                                 assessmentId = statusObject.get("id").getAsString();
+                                                // need to pause before continuing to make sure reports are available
+                                                log(console, "Waiting for the report to become available.");
+                                                wait(checkInterval * 1000);
                                                 break;
                                             }
                                         }
@@ -362,45 +384,41 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                 Call<ResponseBody> reportCall = service.downloadReport(assessmentId, reportFormat, authToken);
                                 Response<ResponseBody> reportResponse = reportCall.execute();
 
-                                if(reportResponse.isSuccessful() && reportResponse.body() != null) {
-                                    try {
-                                        File reportFile = new File(effectiveReportFileName);
-                                        reportFile.createNewFile();
-                                        // there's a null check above
-                                        try(@SuppressWarnings("null")
-                                        InputStream inputStream = reportResponse.body().byteStream(); OutputStream outputStream = new FileOutputStream(reportFile); ) {
-                                            byte[] buffer = new byte[4096];
-                                            long bytesWritten = 0;
+                            if(reportResponse.isSuccessful() && reportResponse.body() != null) {
+                                    File reportFile = new File(effectiveReportFileName);
+                                    // there's a null check above
+                                    try(@SuppressWarnings("null")
+                                    InputStream inputStream = reportResponse.body().byteStream(); OutputStream outputStream = new FileOutputStream(reportFile); ) {
+                                        byte[] buffer = new byte[4096];
+                                        long bytesWritten = 0;
 
-                                            while(true) {
-                                                int read = inputStream.read(buffer);
-                                                if( read == -1 ) {
-                                                    break;
-                                                }
-
-                                                outputStream.write(buffer, 0, read);
-                                                bytesWritten += read;
+                                        while(true) {
+                                            int read = inputStream.read(buffer);
+                                            if( read == -1 ) {
+                                                break;
                                             }
 
-                                            outputStream.flush();
-                                            log(console, "Written " + bytesWritten + " bytes to file " + reportFile.getAbsolutePath());
-                                            
-                                        } catch (Exception e) {
-                                            log(console, "Unexpected Exception: " + e.getLocalizedMessage());
-                                            run.setResult(Result.UNSTABLE);
+                                            outputStream.write(buffer, 0, read);
+                                            bytesWritten += read;
                                         }
+
+                                        outputStream.flush();
+                                        log(console, "Written " + bytesWritten + " bytes to file " + reportFile.getAbsolutePath());
                                     }
-                                    catch(IOException e) {
+                                    catch(Exception e) {
                                         log(console, "Unable to write to file " + effectiveReportFileName + ": " + e.getLocalizedMessage());
                                         run.setResult(Result.UNSTABLE);
                                     }
                                 }
                                 else {
-                                    log(console, "Report failed to download: HTTP" + reportResponse.code());
+                                    log(console, "Report failed to download: HTTP" + reportResponse.code() + ": " + reportCall.request().url());
                                     run.setResult(Result.UNSTABLE);
                                 }
                             }
                         }
+                    }
+                    catch(RuntimeException e) {
+                        throw e;
                     }
                     catch(Exception e) {
                         log(console, "Unexpected exception: " + e.getLocalizedMessage());
@@ -433,7 +451,6 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
-
         
         private String sourceFile;
         private String excludedFile;
