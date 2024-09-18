@@ -1,4 +1,5 @@
 <?jelly escape-by-default='true'?>
 <div>
-    This plugin uploads build artifacts to zScan for app analysis.
+    This plugin can be used to upload mobile applications to Zimperium (zScan) to be scanned for vulnerabilities. Use of this plugin simplifies integrating mobile application security testing into CI/CD process and enables detection and remediation of vulnerabilities earlier in the application SDLC.<br/><br/>
+    For more information on zScan, please see <a href="https://www.zimperium.com/zscan/">Continuous Mobile Application Security Scanning</a>.
 </div>
