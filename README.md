@@ -33,6 +33,16 @@ Fields that need to be populated are:
 - This provides ability to specify patterns to select files to be uploaded, multiple patterns are comma-separated (`*.apk, *.ipa` for example)
 5. Excluded Files
 - Opposite of above, provides ability to specify patterns to exclude files, multiple patterns are comma-separated (`*.md, *.java` for example)
+6. Wait for Report
+- If checked, the plugin will wait for an assessment report after uploading each binary. Reports take 5 - 10 minutes to generate and the build step execution is paused while waiting. Report generation times out after 20 minutes to prevent 'stuck builds'.  If unchecked, the execution will move on to the next binary.  Reports can also be obtained from the zScan console
+7. Report Format
+- Specifies the format for the assessment report.  For more information on SARIF, please see [OASIS Open](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html).
+8. Report File Name
+- Filename(s) for the assessment report(s). Assessment ID is appended to the filename to prevent multiple reports overwriting one another.
+
+## Advanced Configuration
+1. Team Name
+- Team name to assign applications to. This setting is only relevant when uploading an application for the first time. To change the application's team, please use the zScan Console. 
 
 ## Other Maven goals you may find useful
 

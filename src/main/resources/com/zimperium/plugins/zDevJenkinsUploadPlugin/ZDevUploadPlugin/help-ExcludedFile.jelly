@@ -1,0 +1,1 @@
+<div>Opposite of above, provides ability to specify patterns to exclude files, multiple patterns are comma-separated (`*.md, *.java` for example).</div>
