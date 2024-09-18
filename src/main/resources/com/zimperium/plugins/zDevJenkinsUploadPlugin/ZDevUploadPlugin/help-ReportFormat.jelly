@@ -1,1 +1,2 @@
+<?jelly escape-by-default='true'?>
 <div>Format for the assessment report, if configured to wait for one. Both JSON and <a href="https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html">SARIF</a> reports use JSON file structure.</div>

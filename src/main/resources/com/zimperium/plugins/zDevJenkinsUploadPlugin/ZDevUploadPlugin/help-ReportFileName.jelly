@@ -1,1 +1,2 @@
+<?jelly escape-by-default='true'?>
 <div>Filename(s) for the assessment report(s). Assessment ID is appended to the filename to prevent multiple reports overwriting one another.</div>
