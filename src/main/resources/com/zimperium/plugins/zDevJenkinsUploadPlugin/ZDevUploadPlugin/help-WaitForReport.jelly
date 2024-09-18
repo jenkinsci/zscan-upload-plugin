@@ -1,2 +1,0 @@
-<?jelly escape-by-default='true'?>
-<div>If checked, the plugin will wait for the assessment report after uploading each binary. Reports take 5 - 10 minutes to generate and the build step execution is paused while waiting. Report generation times out after 20 minutes to prevent 'stuck builds'.  If unchecked, the execution will move on to the next binary.  Reports can also be obtained from the zScan console.</div>
