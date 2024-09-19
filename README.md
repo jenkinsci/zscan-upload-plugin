@@ -12,16 +12,17 @@ In your console, head over to the *Authorizations* tab in the *Account Managemen
 
 ```mvn clean install```
 
-and the artifact `zDevJenkinsUploadPlugin.hpi` will have been created in the `target` directory
-(`./target/zScanJenkinsUploadPlugin.hpi`.)
+and the artifact `zscan-upload.hpi` will have been created in the `target` directory
+(`./target/zscan-upload.hpi`.)
 If you don't see the `.hpi` file, running ```mvn package``` also creates the `.hpi` file.
 
 ## Installation
 
-The easiest way to install this plugin is from the Jenkins Marketplace.  If you prefer the manual installation, follow these steps:
+The easiest way to install this plugin is from the Jenkins Marketplace.  If you prefer manual installation, follow these steps:
 
-1. Manage Jenkins -> Manage Plugins -> Advanced tab -> Deploy Plugin -> Choose file (`zDevJenkinsUploadPlugin.hpi`)
-2. Restart Jenkins
+1. Download one of the official releases from this repo or build one yourself using the above instructions.
+2. Manage Jenkins -> Manage Plugins -> Advanced tab -> Deploy Plugin -> Choose file (`zscan-upload.hpi`)
+3. Restart Jenkins
 
 ## Configuration
 
