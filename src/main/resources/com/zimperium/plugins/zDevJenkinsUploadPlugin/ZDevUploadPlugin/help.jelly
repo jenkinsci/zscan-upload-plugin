@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>Jenkins plugin to upload builds to zScan for analysis and obtain assessment report (optional). For more information on zScan, please see <a href="https://zc202.zimperium.com/ziap-docs/zscan-docs/">zScan Documentation</a></div>

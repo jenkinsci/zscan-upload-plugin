@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>Team name to assign applications to. This setting is only relevant when uploading an application for the first time.</div>

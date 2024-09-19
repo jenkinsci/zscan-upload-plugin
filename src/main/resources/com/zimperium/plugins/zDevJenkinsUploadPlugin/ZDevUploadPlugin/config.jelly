@@ -6,12 +6,16 @@
     </f:entry>
 
     <f:entry title="Client ID" field="clientId">
-        <f:password name="clientId" />
+        <f:textbox name="clientId" />
     </f:entry>
 
     <f:entry title="Client Secret" field="clientSecret">
         <f:password name="clientSecret" />
     </f:entry>
+
+    <f:validateButton
+        title="Validate Credentials" progress="Logging in..."
+        method="validateCredentials" with="endpoint,clientId,clientSecret" />
 
     <f:entry title="Source Files" field="sourceFile">
         <f:textbox name="sourceFile" />
@@ -21,4 +25,26 @@
         <f:textbox name="excludedFile" />
     </f:entry>
 
+    <f:block title="Report Generation">
+        <f:entry title="Report generation" field="waitForReport" name="waitForReport">
+            <f:checkbox title="Wait for Scan Report" />
+        </f:entry>
+        <f:entry title="Report Format" field="reportFormat">
+            <select name="reportFormat">
+                <f:option value="json" selected="${instance.reportFormat.equals('json')?'true':'false'}">JSON</f:option>
+                <f:option value="sarif" selected="${instance.reportFormat.equals('sarif')?'true':'false'}">SARIF</f:option>
+            </select>
+        </f:entry>
+        <f:entry title="Report File Name" field="reportFileName">
+            <f:textbox default="${descriptor.getDefaultReportFileName()}" />
+        </f:entry>
+    </f:block>
+
+    <f:section>
+        <f:advanced>
+            <f:entry title="Team" field="teamName">
+                <f:textbox default="${descriptor.getDefaultTeamName()}" />
+            </f:entry>
+        </f:advanced>
+    </f:section>
 </j:jelly>
