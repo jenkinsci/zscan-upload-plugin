@@ -22,6 +22,7 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import hudson.util.FormValidation;
+import hudson.util.Secret;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import okhttp3.*;
@@ -69,7 +70,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public String excludedFile;
     public String endpoint;
     public String clientId;
-    public String clientSecret;
+    public Secret clientSecret;
 
     // optional
     private Boolean waitForReport;
@@ -78,7 +79,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     private String teamName;   
 
     @DataBoundConstructor
-    public ZDevUploadPlugin(String sourceFile, String excludedFile, String endpoint, String clientId, String clientSecret) {
+    public ZDevUploadPlugin(String sourceFile, String excludedFile, String endpoint, String clientId, Secret clientSecret) {
         this.sourceFile = sourceFile;
         this.excludedFile = excludedFile;
         this.endpoint = endpoint;
@@ -173,7 +174,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         }
 
         // Login and obtain a token
-        Call<LoginResponse> loginResponseCall = service.login(new LoginCredentials(this.clientId, this.clientSecret));
+        Call<LoginResponse> loginResponseCall = service.login(new LoginCredentials(this.clientId, Secret.toString(this.clientSecret)));
         Response<LoginResponse> response = loginResponseCall.execute();
 
         if (!response.isSuccessful() || response.body() == null) {
@@ -343,7 +344,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             if(scanStatus.equals("Done")) {
                                                 assessmentId = statusObject.get("id").getAsString();
                                                 // need to pause before continuing to make sure reports are available
-                                                log(console, "Waiting for the report to become available.");
+                                                log(console, "Waiting for the report to become available...");
                                                 wait(checkInterval * 1000);
                                                 break;
                                             }
