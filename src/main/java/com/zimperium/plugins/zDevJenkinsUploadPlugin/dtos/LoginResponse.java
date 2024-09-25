@@ -5,10 +5,14 @@ import com.google.gson.annotations.SerializedName;
 
 public class LoginResponse {
 
+    // this class is not serialized to *storage*; it is only used in-memory
+    @SuppressWarnings("lgtm[jenkins/plaintext-storage]")
     @SerializedName("accessToken")
     @Expose
     private String accessToken;
 
+    // this class is not serialized to *storage*; it is only used in-memory
+    @SuppressWarnings("lgtm[jenkins/plaintext-storage]")
     @SerializedName("refreshToken")
     @Expose
     private String refreshToken;

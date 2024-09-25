@@ -544,6 +544,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         }
 
         // Validate credentials by trying to obtain access token
+        // This method can be executed by anyone since the token is not saved or logged anywhere
+        // Only the response code is checked
+        @SuppressWarnings("lgtm[jenkins/no-permission-check]")
         @POST
         public FormValidation doValidateCredentials(
             @QueryParameter("endpoint") final String endpoint,
