@@ -1,4 +1,4 @@
-# zscan-jenkins-plugin
+# zscan-upload
 
 Jenkins plugin to upload builds to zScan for analysis.
 
@@ -96,7 +96,7 @@ For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` s
 
 This plugin is licensed under the MIT License. By using this plugin, you agree to the following terms:
 
-```
+```text
 MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

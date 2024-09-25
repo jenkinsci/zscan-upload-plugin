@@ -60,8 +60,7 @@
     </properties>
     <name>Upload to zScan</name>
     <description>This plugin uploads build artifacts to Zimperium zScan for app analysis</description>
-    <!-- TODO: Update this when we have a public repo -->
-    <url>https://www.zimperium.com</url>
+    <url>https://github.com/Zimperium/zscan-plugin-jenkins</url>
     <licenses>
         <license>
             <name>MIT License</name>
