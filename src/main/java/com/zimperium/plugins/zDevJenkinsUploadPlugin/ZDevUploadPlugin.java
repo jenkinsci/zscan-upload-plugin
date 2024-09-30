@@ -23,7 +23,6 @@ import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
-import hudson.security.Permission;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
@@ -511,8 +510,10 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             return "Upload build artifacts to zScan";
         }
 
-        // TODO: Add server validation logic
         public FormValidation doCheckEndpoint(@QueryParameter String value) throws IOException, ServletException {
+            if (value.isBlank()) {
+                return FormValidation.error("Endpoint cannot be blank.");
+            }
             return FormValidation.ok();
         }
 
