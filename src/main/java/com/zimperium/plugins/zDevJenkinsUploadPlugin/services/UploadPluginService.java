@@ -21,7 +21,7 @@ public interface UploadPluginService {
     @POST("api/auth/v1/api_keys/access")
     Call<LoginResponse> refreshAccess(@Body RefreshCredentials body);
 
-    @POST("api/zdev-upload/v1/uploads/build")
+    @POST("api/zdev-upload/public/v1/uploads/build")
     Call<ResponseBody> upload(@Header("Authorization") String clientSecret, @Body RequestBody body);
 
     @PUT("api/zdev-app/public/v1/apps/{appId}/upload")
@@ -30,10 +30,10 @@ public interface UploadPluginService {
     @GET("api/auth/public/v1/teams")
     Call<ResponseBody> listTeams(@Header("Authorization") String clientSecret);
 
-    @GET("api/zdev-app/pub/v1/assessments/status")
+    @GET("api/zdev-app/public/v1/assessments/status")
     Call<ResponseBody> checkStatus(@Query("buildId") String buildId,  @Header("Authorization") String clientSecret);
 
-    @GET("api/zdev-app/pub/v1/assessments/{assessmentId}/{report_format}")
+    @GET("api/zdev-app/public/v1/assessments/{assessmentId}/{report_format}")
     @Streaming
     Call<ResponseBody> downloadReport(@Path("assessmentId") String assessmentId, @Path("report_format") String reportFormat,  @Header("Authorization") String clientSecret);
 }

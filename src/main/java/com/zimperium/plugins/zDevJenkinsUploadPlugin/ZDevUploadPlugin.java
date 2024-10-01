@@ -23,6 +23,7 @@ import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import okhttp3.*;
@@ -236,6 +237,12 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         // If teamID is empty, find the correct team id by name
                         if(teamId.isEmpty()) {
                             log(console, "Application " + zdevAppId + " does not belong to a team. Assigning it to the " + teamName + " team.");
+
+                            // need to wait a bit; otherwise we can get 404
+                            synchronized(this) {
+                                wait(checkInterval * 1000);
+                            }
+
                             // get the list of teams to figure out team id
                             Call<ResponseBody> teamsCall = service.listTeams(authToken);
                             Response<ResponseBody> teamList = teamsCall.execute();
@@ -287,7 +294,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             else {
                                                 log(console, "Unable to assign this app to a team.  Please review team name setting and retry.");
                                                 if(assignResponse.errorBody() != null) {
-                                                    log(console, "HTTP " + assignResponse.code() + ": " + assignResponse.errorBody());
+                                                    log(console, "HTTP " + assignResponse.code() + ": " + assignResponse.errorBody().string());
                                                 }
                                             }
                                         }
@@ -295,9 +302,22 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             log(console, "Unable to assign this app to a team.  Please review team name setting and retry.");
                                         }
                                     }
+                                    else {
+                                        log(console, "Unable to assign this app to a team.  Unexpected response from the server.");
+                                        if(teamList.body() != null) {
+                                            log(console, "HTTP " + teamList.code() + ": " + teamList.body().string());
+                                        }
+                                    }
+                                }
+                                else {
+                                    log(console, "Unable to assign this app to a team.  Please review team name setting and credentials, and retry.");
+                                    if(teamList.errorBody() != null) {
+                                        log(console, "HTTP " + teamList.code() + ": " + teamList.errorBody().string());
+                                    }
                                 }
                             }
                             catch(RuntimeException e) {
+                                log(console, "Unexpected runtime exception: " + e.getLocalizedMessage());
                                 throw e;
                             }
                             catch(Exception e) {
@@ -354,6 +374,15 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             run.setResult(Result.UNSTABLE);
                                             break;
                                         }
+                                    }
+                                    else if (statusResponse.code() != 404) {
+                                        log(console, "Unable to get assessment report. Please check credentials and try again.");
+                                        if(statusResponse.errorBody() != null) {
+                                            log(console, "HTTP " + statusResponse.code() + ": " + statusResponse.errorBody().string());
+                                        }
+                                        run.setResult(Result.UNSTABLE);
+                                        // move on to the next one
+                                        break;
                                     }
                                     
                                     wait(checkInterval * 1000);
@@ -419,6 +448,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         }
                     }
                     catch(RuntimeException e) {
+                        log(console, "Unexpected runtime exception: " + e.getLocalizedMessage());
                         throw e;
                     }
                     catch(Exception e) {
@@ -480,8 +510,10 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             return "Upload build artifacts to zScan";
         }
 
-        // TODO: Add server validation logic
         public FormValidation doCheckEndpoint(@QueryParameter String value) throws IOException, ServletException {
+            if (value.isBlank()) {
+                return FormValidation.error("Endpoint cannot be blank.");
+            }
             return FormValidation.ok();
         }
 
@@ -546,7 +578,6 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         // Validate credentials by trying to obtain access token
         // This method can be executed by anyone since the token is not saved or logged anywhere
         // Only the response code is checked
-        @SuppressWarnings("lgtm[jenkins/no-permission-check]")
         @POST
         public FormValidation doValidateCredentials(
             @QueryParameter("endpoint") final String endpoint,
@@ -555,6 +586,8 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             @AncestorInPath Job<?,?> job) {
 
             try {
+                Jenkins.get().checkPermission(hudson.security.Permission.CONFIGURE);
+
                 OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
                     .writeTimeout(2, TimeUnit.MINUTES)
                     .readTimeout(60, TimeUnit.SECONDS)
@@ -575,11 +608,14 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                     return FormValidation.error("Unable to login with provided Client ID and Client Secret to " + endpoint);
                 }
             }
+            catch(hudson.security.AccessDeniedException3 e) {
+                return FormValidation.error("User not authorized to check credentials.");
+            }
             catch(java.net.UnknownHostException e) {
                 return FormValidation.error("Unknown host: " + endpoint);
             }
             catch(java.io.IOException e) {
-                return FormValidation.error("Unable to connect to the provided endpoint: " + endpoint);
+                return FormValidation.error("Unable to connect to the provided endpoint: " + endpoint + "(" + e.getLocalizedMessage() + ")");
             }
             catch(Exception e) {
                 return FormValidation.error("Error validating credentials: " + e.getLocalizedMessage());
