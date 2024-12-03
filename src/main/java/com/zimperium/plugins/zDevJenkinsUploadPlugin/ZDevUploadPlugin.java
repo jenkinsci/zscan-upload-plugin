@@ -14,7 +14,6 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.Item;
-import hudson.model.Job;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -577,7 +576,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         }
 
         // Validate credentials by trying to obtain access token
-        // This method can be executed by anyone since the token is not saved or logged anywhere
+        // This method can be executed by anyone with job configuration permission
         // Only the response code is checked
         @POST
         public FormValidation doValidateCredentials(
