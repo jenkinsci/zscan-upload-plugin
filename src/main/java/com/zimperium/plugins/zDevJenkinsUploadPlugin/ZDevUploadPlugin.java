@@ -13,6 +13,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractProject;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.Result;
 import hudson.model.Run;
@@ -583,10 +584,14 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             @QueryParameter("endpoint") final String endpoint,
             @QueryParameter("clientId") final String clientId, 
             @QueryParameter("clientSecret") final String clientSecret,
-            @AncestorInPath Job<?,?> job) {
+            @AncestorInPath Item item) {
 
             try {
-                Jenkins.get().checkPermission(hudson.security.Permission.CONFIGURE);
+                if(item == null){
+                    Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+                }else {
+                    item.checkPermission(Item.CONFIGURE);
+                }
 
                 OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
                     .writeTimeout(2, TimeUnit.MINUTES)
