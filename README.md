@@ -1,20 +1,29 @@
 # zscan-upload
 
-Jenkins plugin to upload builds to zScan for analysis.
+Jenkins plugin to upload builds to zScan for analysis. 
+
+zScan is part of the [Zimperium MAPS](https://www.zimperium.com/mobile-app-protection/) Siute. The suite provides mobile app teams with centralized threat visibility and comprehensive in-app protection from development through runtime.  It combines both inside-out and outside-in security approaches to help organizations build compliant, secure, and resilient mobile apps. Using this plugin to integrate zScan into CI/CD pipelines allows mobile application development teams to detect vulnerabilities earlier in the development lifecycle.
 
 ## Pre-requisites
 
 This project requires Java 17 or higher to build. All of the 3rd-party jars we're using are compiled with Java 17.  
 
-In your console, head over to the *Authorizations* tab in the *Account Management* section and generate a new API key that at least has the permissions of `zScan Builds - Upload`.  If assessment reports are required, the `zScan Assessments - View` permission is also necessary.
+A Zimperium Console account with a zScan (MAPS) license is required.  In your console, head over to the *Authorizations* tab in the *Account Management* section and generate a new API key that at least has the permissions of `zScan Builds - Upload`.  If assessment reports are required, the `zScan Assessments - View` permission is also necessary.
 
 ## Build
 
 ```mvn clean install```
 
 and the artifact `zscan-upload.hpi` will have been created in the `target` directory
-(`./target/zscan-upload.hpi`.)
-If you don't see the `.hpi` file, running ```mvn package``` also creates the `.hpi` file.
+(`./target/zscan-upload.hpi`.) Running ```mvn package``` also creates the `.hpi` file.
+
+### Other Maven goals you may find useful when building this plugin
+
+The Maven sub-goals provided by the HPI plugin are documented here:
+
+[Jenkins Maven Plugin Goals](https://jenkinsci.github.io/maven-hpi-plugin/plugin-info.html)
+
+For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts debug instance of Jenkins with the plugin preloaded.
 
 ## Installation
 
@@ -70,13 +79,6 @@ Team name to assign applications to. If no team name is provided or if a team wi
 
 **Note:** The API key must have additional permissions to be able to manage team assignment: `Common - Teams - Manage` and `zScan Apps - Manage`.  This setting is only relevant when uploading an application for the first time. To change the application's team, please use the zScan Console.
 
-## Other Maven goals you may find useful when building this plugin
-
-The Maven sub-goals provided by the HPI plugin are documented here:
-
-[Jenkins Maven Plugin Goals](https://jenkinsci.github.io/maven-hpi-plugin/plugin-info.html)
-
-For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts debug instance of Jenkins with the plugin preloaded.
 
 ## References
 
