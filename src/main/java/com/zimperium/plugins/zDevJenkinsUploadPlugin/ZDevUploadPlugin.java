@@ -13,7 +13,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractProject;
-import hudson.model.Job;
+import hudson.model.Item;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -576,17 +576,21 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         }
 
         // Validate credentials by trying to obtain access token
-        // This method can be executed by anyone since the token is not saved or logged anywhere
+        // This method can be executed by anyone with job configuration permission
         // Only the response code is checked
         @POST
         public FormValidation doValidateCredentials(
             @QueryParameter("endpoint") final String endpoint,
             @QueryParameter("clientId") final String clientId, 
             @QueryParameter("clientSecret") final String clientSecret,
-            @AncestorInPath Job<?,?> job) {
+            @AncestorInPath Item item) {
 
             try {
-                Jenkins.get().checkPermission(hudson.security.Permission.CONFIGURE);
+                if(item == null){
+                    Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+                }else {
+                    item.checkPermission(Item.CONFIGURE);
+                }
 
                 OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
                     .writeTimeout(2, TimeUnit.MINUTES)
