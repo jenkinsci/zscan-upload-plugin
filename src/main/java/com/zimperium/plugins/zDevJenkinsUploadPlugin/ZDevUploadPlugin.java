@@ -28,12 +28,13 @@ import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import okhttp3.*;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
 import org.apache.commons.io.FilenameUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.verb.POST;
 import retrofit2.Call;
 import retrofit2.Response;
@@ -77,7 +78,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     private Boolean waitForReport;
     private String reportFormat;
     private String reportFileName;
-    private String teamName;   
+    private String teamName;
 
     @DataBoundConstructor
     public ZDevUploadPlugin(String sourceFile, String excludedFile, String endpoint, String clientId, Secret clientSecret) {
@@ -177,18 +178,17 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         // Login and obtain a token
         Call<LoginResponse> loginResponseCall = service.login(new LoginCredentials(this.clientId, Secret.toString(this.clientSecret)));
         Response<LoginResponse> response = loginResponseCall.execute();
+        LoginResponse loginResponseBody = response.body();
 
-        if (!response.isSuccessful() || response.body() == null) {
+        if (!response.isSuccessful() || loginResponseBody == null) {
             log(console, "Unable to login with provided Client ID and Client Secret to " + this.endpoint);
             run.setResult(DEFAULT_STEP_RESULT);
             return;
         }
 
-        @SuppressWarnings("null") // there's a null check above
-        String accessToken = response.body().getAccessToken();
-        @SuppressWarnings("null")
-        String refreshToken = response.body().getRefreshToken();
-        String authToken = "Bearer " + accessToken;        
+        String accessToken = loginResponseBody.getAccessToken();
+        String refreshToken = loginResponseBody.getRefreshToken();
+        String authToken = "Bearer " + accessToken;
 
         int totalCount = 0;
         for (String startPath : expanded.split(",")) {
@@ -201,9 +201,19 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                 }
 
                 String fileName = path.getName();
-                File file = new File(path.getRemote());
 
-                log(console, "Uploading " + fileName + " to " + this.endpoint);
+                FilePath localPath = null;
+                if(path.isRemote()) {
+                    // copy locally
+                    localPath = new FilePath(File.createTempFile(fileName, ".apk"));
+                    localPath.copyFrom(path);
+                }
+                else {
+                    localPath = path;
+                }
+
+                File file = new File(localPath.getRemote());
+                log(console, "Uploading " + file.getName() + " (" + file.getAbsolutePath() + ") to " + this.endpoint);
 
                 String branchName = (envVars.get("BRANCH_NAME") != null) ? envVars.get("BRANCH_NAME") : "";
                 String buildNumber = (envVars.get("BUILD_NUMBER") != null) ? envVars.get("BUILD_NUMBER") : "";
@@ -214,7 +224,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         .addFormDataPart("ciToolName", toolName)
                         .addFormDataPart("branchName", branchName)
                         .addFormDataPart("buildNumber", buildNumber)
-                        .addFormDataPart("buildFile", fileName, RequestBody.create(MediaType.parse("multipart/form-data"), file));
+                        .addFormDataPart("buildFile", file.getName(), RequestBody.create(MediaType.parse("multipart/form-data"), file));
                 RequestBody requestBody = multipartBody.build();
                 Call<ResponseBody> uploadCall = service.upload(authToken, requestBody);
 
@@ -247,11 +257,10 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                             Call<ResponseBody> teamsCall = service.listTeams(authToken);
                             Response<ResponseBody> teamList = teamsCall.execute();
                             try {
-                                if(teamList.isSuccessful() && teamList.body() != null) {
-                                    // There's a null check above
-                                    @SuppressWarnings("null")
-                                    JsonObject teamsObject = JsonParser.parseString(teamList.body().string()).getAsJsonObject();
-                                    if(!teamsObject.isJsonNull() && !teamsObject.isEmpty() && teamsObject.get("content").isJsonArray()) {
+                                ResponseBody teamListBody = teamList.body();
+                                if(teamList.isSuccessful() && teamListBody != null) {
+                                    JsonObject teamsObject = JsonParser.parseString(teamListBody.string()).getAsJsonObject();
+                                    if(teamsObject != null && !teamsObject.isJsonNull() && !teamsObject.isEmpty() && teamsObject.get("content").isJsonArray()) {
                                         JsonArray teamArray = teamsObject.get("content").getAsJsonArray();
                                         log(console, "Found " + teamArray.size() + " teams");
                                         for (JsonElement teamElement : teamArray) {
@@ -293,8 +302,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             }
                                             else {
                                                 log(console, "Unable to assign this app to a team.  Please review team name setting and retry.");
-                                                if(assignResponse.errorBody() != null) {
-                                                    log(console, "HTTP " + assignResponse.code() + ": " + assignResponse.errorBody().string());
+                                                ResponseBody assignResponseBody = assignResponse.errorBody();
+                                                if(assignResponseBody != null) {
+                                                    log(console, "HTTP " + assignResponse.code() + ": " + assignResponseBody.string());
                                                 }
                                             }
                                         }
@@ -304,15 +314,17 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                     }
                                     else {
                                         log(console, "Unable to assign this app to a team.  Unexpected response from the server.");
-                                        if(teamList.body() != null) {
-                                            log(console, "HTTP " + teamList.code() + ": " + teamList.body().string());
+                                        teamListBody = teamList.body();
+                                        if(teamListBody != null) {
+                                            log(console, "HTTP " + teamList.code() + ": " + teamListBody.string());
                                         }
                                     }
                                 }
                                 else {
                                     log(console, "Unable to assign this app to a team.  Please review team name setting and credentials, and retry.");
-                                    if(teamList.errorBody() != null) {
-                                        log(console, "HTTP " + teamList.code() + ": " + teamList.errorBody().string());
+                                    teamListBody = teamList.errorBody();
+                                    if(teamListBody != null) {
+                                        log(console, "HTTP " + teamList.code() + ": " + teamListBody.string());
                                     }
                                 }
                             }
@@ -332,59 +344,60 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         // report may have taken a long time; refresh the access token
                         Call<LoginResponse> refreshTokenCall = service.refreshAccess(new RefreshCredentials(refreshToken));
                         Response<LoginResponse> tokenResponse = refreshTokenCall.execute();
-
-                        if (!tokenResponse.isSuccessful() || tokenResponse.body() == null) {
+                        LoginResponse tokenResponseBody = tokenResponse.body();
+                        if (!tokenResponse.isSuccessful() || tokenResponseBody == null) {
                             log(console, "Unable to refresh access token. Will continue using the original.");
                         }
                         else {
-                            // there's a null check above
-                            @SuppressWarnings("null")
-                            String newAccessToken = tokenResponse.body().getAccessToken();
-                            refreshToken = tokenResponse.body().getRefreshToken();
+                            String newAccessToken = tokenResponseBody.getAccessToken();
+                            refreshToken = tokenResponseBody.getRefreshToken();
                             authToken = "Bearer " + newAccessToken;
                         }
                         
                         String assessmentId = "";
                         // wait for the report, if configured
                         if(waitForReport) {
-                            synchronized(this) {
-                                start = System.currentTimeMillis();
-                                end = start + reportTimeout * 1000;
-                                while( System.currentTimeMillis() < end ) {
-                                    Call<ResponseBody> statusCall = service.checkStatus(buildId, authToken);
-                                    Response<ResponseBody> statusResponse = statusCall.execute();
-                                    if(statusResponse.isSuccessful()) {
-                                        try(ResponseBody statusBody = statusResponse.body()) {
-                                            // we're inside the try() block; exceptions will be caught
-                                            @SuppressWarnings("null")
-                                            JsonObject statusObject = JsonParser.parseString(statusBody.string()).getAsJsonObject();
-                                            String scanStatus = statusObject.getAsJsonObject("zdevMetadata").get("analysis").getAsString();
-                                            log(console, "Scan status = " + scanStatus);
+                            start = System.currentTimeMillis();
+                            end = start + reportTimeout * 1000;
+                            while( System.currentTimeMillis() < end ) {
+                                Call<ResponseBody> statusCall = service.checkStatus(buildId, authToken);
+                                Response<ResponseBody> statusResponse = statusCall.execute();
+                                if(statusResponse.isSuccessful()) {
+                                    try(ResponseBody statusBody = statusResponse.body()) {
+                                        // we're inside the try() block; exceptions will be caught
+                                        @SuppressWarnings("null")
+                                        JsonObject statusObject = JsonParser.parseString(statusBody.string()).getAsJsonObject();
+                                        String scanStatus = statusObject.getAsJsonObject("zdevMetadata").get("analysis").getAsString();
+                                        log(console, "Scan status = " + scanStatus);
 
-                                            if(scanStatus.equals("Done")) {
-                                                assessmentId = statusObject.get("id").getAsString();
-                                                // need to pause before continuing to make sure reports are available
-                                                log(console, "Waiting for the report to become available...");
+                                        if(scanStatus.equals("Done")) {
+                                            assessmentId = statusObject.get("id").getAsString();
+                                            // need to pause before continuing to make sure reports are available
+                                            log(console, "Waiting for the report to become available...");
+                                            synchronized(this) {
                                                 wait(checkInterval * 1000);
-                                                break;
                                             }
-                                        }
-                                        catch(Exception e) {
-                                            log(console, "Unexpected exception: " + e.getLocalizedMessage());
-                                            run.setResult(Result.UNSTABLE);
                                             break;
                                         }
                                     }
-                                    else if (statusResponse.code() != 404) {
-                                        log(console, "Unable to get assessment report. Please check credentials and try again.");
-                                        if(statusResponse.errorBody() != null) {
-                                            log(console, "HTTP " + statusResponse.code() + ": " + statusResponse.errorBody().string());
-                                        }
+                                    catch(Exception e) {
+                                        log(console, "Unexpected exception: " + e.getLocalizedMessage());
                                         run.setResult(Result.UNSTABLE);
-                                        // move on to the next one
                                         break;
                                     }
-                                    
+                                }
+                                else if (statusResponse.code() != 404) {
+                                    log(console, "Unable to get assessment report. Please check credentials and try again.");
+                                    ResponseBody statusBody = statusResponse.errorBody();
+                                    if(statusBody != null) {
+                                        log(console, "HTTP " + statusResponse.code() + ": " + statusBody.string());
+                                    }
+                                    run.setResult(Result.UNSTABLE);
+                                    // move on to the next one
+                                    break;
+                                }
+                                
+                                synchronized(this) {
                                     wait(checkInterval * 1000);
                                 }
                             }
@@ -392,15 +405,15 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                             // report may have taken a long time; refresh the access token
                             refreshTokenCall = service.refreshAccess(new RefreshCredentials(refreshToken));
                             tokenResponse = refreshTokenCall.execute();
+                            tokenResponseBody = tokenResponse.body();
                     
-                            if (!tokenResponse.isSuccessful() || tokenResponse.body() == null) {
+                            if (!tokenResponse.isSuccessful() || tokenResponseBody == null) {
                                 log(console, "Unable to refresh access token. Will continue using the original.");
                             }
                             else {
-                                // there's a null check above
-                                @SuppressWarnings("null")
-                                String newAccessToken = tokenResponse.body().getAccessToken();
-                                refreshToken = tokenResponse.body().getRefreshToken();
+
+                                String newAccessToken = tokenResponseBody.getAccessToken();
+                                refreshToken = tokenResponseBody.getRefreshToken();
                                 authToken = "Bearer " + newAccessToken;
                             }
 
@@ -408,19 +421,16 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                 // get the actual report
                                 log(console, "Retrieving report for assessment " + assessmentId);
 
-                                // append assessment id to the filename
-                                String effectiveReportFileName = FilenameUtils.removeExtension(reportFileName) + "-" + assessmentId + "." + FilenameUtils.getExtension(reportFileName);
-
                                 Call<ResponseBody> reportCall = service.downloadReport(assessmentId, reportFormat, authToken);
                                 Response<ResponseBody> reportResponse = reportCall.execute();
+                                ResponseBody reportResponseBody = reportResponse.body();
 
-                            if(reportResponse.isSuccessful() && reportResponse.body() != null) {
-                                    File reportFile = new File(effectiveReportFileName);
-                                    // there's a null check above
-                                    try(@SuppressWarnings("null")
-                                    InputStream inputStream = reportResponse.body().byteStream(); OutputStream outputStream = new FileOutputStream(reportFile); ) {
+                                if(reportResponse.isSuccessful() && reportResponseBody != null) {
+                                    boolean reportSuccess = false;
+                                    long bytesWritten = 0;
+                                    File reportFile = File.createTempFile("zScan-report-", ".json");
+                                    try( InputStream inputStream = reportResponseBody.byteStream(); OutputStream outputStream = new FileOutputStream(reportFile); ) {
                                         byte[] buffer = new byte[4096];
-                                        long bytesWritten = 0;
 
                                         while(true) {
                                             int read = inputStream.read(buffer);
@@ -433,11 +443,32 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                         }
 
                                         outputStream.flush();
-                                        log(console, "Written " + bytesWritten + " bytes to file " + reportFile.getAbsolutePath());
+                                        reportSuccess = true;
                                     }
                                     catch(Exception e) {
-                                        log(console, "Unable to write to file " + effectiveReportFileName + ": " + e.getLocalizedMessage());
+                                        log(console, "Unable to write to a temporary file " + reportFile.getAbsolutePath() + ": " + e.getLocalizedMessage());
                                         run.setResult(Result.UNSTABLE);
+                                    }
+
+                                    if(reportSuccess && bytesWritten > 0) {
+                                        // append assessment id to the filename
+                                        String effectiveReportFileName = FilenameUtils.removeExtension(reportFileName) + "-" + assessmentId + "." + FilenameUtils.getExtension(reportFileName);
+
+                                        try {
+                                            // copy the report to the workspace
+                                            FilePath reportPath = new FilePath(workspace, effectiveReportFileName);
+                                            reportPath.copyFrom(new FilePath(reportFile));
+                                            log(console, "Written " + bytesWritten + " bytes to file " + reportPath.getRemote());
+                                        }
+                                        catch(Exception e) {
+                                            log(console, "Unable to copy report to workspace: " + e.getLocalizedMessage());
+                                            run.setResult(Result.UNSTABLE);
+                                        }
+                                    }
+                                    
+                                    // delete the report
+                                    if(!reportFile.delete()) {
+                                        log(console, "Unable to delete temporary file " + reportFile.getAbsolutePath());
                                     }
                                 }
                                 else {
@@ -455,19 +486,27 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         log(console, "Unexpected exception: " + e.getLocalizedMessage());
                         run.setResult(Result.UNSTABLE);
                     }
-                    totalCount++;
 
-                    // safety check
-                    if(totalCount >= MAX_FILES_UPLOAD) {
-                        break;
-                    }
+                    totalCount++;
                 } else {
                     log(console, "An error (HTTP " + uploadResponse.code() + ") occurred while trying to upload " + fileName + " to " + this.endpoint);
-                    if(uploadResponse.errorBody() != null) {
-                        // there is a null check above
-                        log(console, "Error message: " + uploadResponse.errorBody().string());
+                    ResponseBody uploadResponseBody = uploadResponse.errorBody();
+                    if(uploadResponseBody != null) {
+                        log(console, "Error message: " + uploadResponseBody.string());
                     }
                     run.setResult(Result.UNSTABLE);
+                }
+
+                // delete the local copy if needed
+                if(path.isRemote()) {
+                    if(!localPath.delete()) {
+                        log(console, "Unable to delete temporary file " + localPath.getRemote());
+                    }
+                }
+
+                // safety check
+                if(totalCount >= MAX_FILES_UPLOAD) {
+                    break;
                 }
             }
         }
@@ -481,6 +520,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     }
 
     @Extension
+    @Symbol("zScan Upload")
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
         
         private String sourceFile;
@@ -518,7 +558,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         }
 
         @Override
-        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+        public boolean configure(StaplerRequest2 req, JSONObject formData) throws FormException {
             sourceFile = formData.getString("sourceFile");
             excludedFile = formData.getString("excludedFile");
             endpoint = formData.getString("endpoint");

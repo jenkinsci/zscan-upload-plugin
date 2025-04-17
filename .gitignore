@@ -7,9 +7,6 @@
 .idea
 .vscode
 
-# GitHub Actions
-.github
-
 # CMake
 cmake-build-debug/
 

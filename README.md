@@ -1,8 +1,8 @@
 # zscan-upload
 
-Jenkins plugin to upload builds to zScan for analysis. 
+Jenkins plugin to upload builds to zScan for analysis.
 
-zScan is part of the [Zimperium MAPS](https://www.zimperium.com/mobile-app-protection/) Siute. The suite provides mobile app teams with centralized threat visibility and comprehensive in-app protection from development through runtime.  It combines both inside-out and outside-in security approaches to help organizations build compliant, secure, and resilient mobile apps. Using this plugin to integrate zScan into CI/CD pipelines allows mobile application development teams to detect vulnerabilities earlier in the development lifecycle.
+zScan is part of the [Zimperium MAPS](https://www.zimperium.com/mobile-app-protection/) Suite. The suite provides mobile app teams with centralized threat visibility and comprehensive in-app protection from development through runtime.  It combines both inside-out and outside-in security approaches to help organizations build compliant, secure, and resilient mobile apps. Using this plugin to integrate zScan into CI/CD pipelines allows mobile application development teams to detect vulnerabilities earlier in the development lifecycle.
 
 ## Pre-requisites
 
@@ -78,7 +78,6 @@ Filename(s) for the assessment report(s). Assessment ID is appended to the filen
 Team name to assign applications to. If no team name is provided or if a team with the provided name is not found, the 'Default' team is used.  
 
 **Note:** The API key must have additional permissions to be able to manage team assignment: `Common - Teams - Manage` and `zScan Apps - Manage`.  This setting is only relevant when uploading an application for the first time. To change the application's team, please use the zScan Console.
-
 
 ## References
 
