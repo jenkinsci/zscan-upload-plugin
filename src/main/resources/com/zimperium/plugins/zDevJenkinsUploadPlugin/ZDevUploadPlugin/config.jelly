@@ -1,28 +1,39 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
 
-    <f:entry title="Zimperium Server URL Endpoint" field="endpoint">
-        <f:textbox name="endpoint" />
-    </f:entry>
+    <f:block title="Zimperium Console Information">
+        <f:optionalBlock title="Use Global Console Information (${descriptor.globalEndpoint})" inline="true"
+            field="useOwnConsoleInfo" negative="true"
+            checked="${instance == null ? true : !instance.getUseOwnConsoleInfo()}">
 
-    <f:entry title="Client ID" field="clientId">
-        <f:textbox name="clientId" />
-    </f:entry>
+            <f:entry title="Zimperium Server URL Endpoint" field="endpoint">
+                <f:textbox clazz="required" />
+            </f:entry>
 
-    <f:entry title="Client Secret" field="clientSecret">
-        <f:password name="clientSecret" />
-    </f:entry>
+            <f:entry title="Client ID" field="clientId">
+                <f:textbox />
+            </f:entry>
 
-    <f:validateButton
-        title="Validate Credentials" progress="Logging in..."
-        method="validateCredentials" with="endpoint,clientId,clientSecret" />
+            <f:entry title="Client Secret" field="clientSecret">
+                <f:password />
+            </f:entry>
+
+            <f:entry title="Proxy Settings" field="useProxy" >
+                <f:checkbox title="Use Jenkins HTTP Proxy Settings" default="true" />
+            </f:entry>
+
+            <f:validateButton   
+                title="Validate Credentials" progress="Logging in..."
+                method="validateCredentials" with="endpoint,clientId,clientSecret,useProxy" />
+        </f:optionalBlock>
+    </f:block>
 
     <f:entry title="Source Files" field="sourceFile">
-        <f:textbox name="sourceFile" />
+        <f:textbox clazz="required" />
     </f:entry>
 
     <f:entry title="Excluded Files" field="excludedFile">
-        <f:textbox name="excludedFile" />
+        <f:textbox />
     </f:entry>
 
     <f:block title="Report Generation">

@@ -23,7 +23,7 @@ The Maven sub-goals provided by the HPI plugin are documented here:
 
 [Jenkins Maven Plugin Goals](https://jenkinsci.github.io/maven-hpi-plugin/plugin-info.html)
 
-For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts debug instance of Jenkins with the plugin preloaded.
+For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts a test instance of Jenkins with the plugin preloaded.
 
 ## Installation
 
@@ -35,45 +35,57 @@ The easiest way to install this plugin is from the Jenkins Marketplace.  If you 
 
 ## Configuration
 
-In the `Configure` section of your project, `Add post-build action` and select `Upload build artifacts to zScan`.
+### Global Configuration
 
-Fields that need to be populated are:
+Settings related to the Zimperium server (console) may be configured globally and then reused by all projects on the server.  These settings can also be overwritten by individual projects.
 
-### Zimperium Server URL Endpoint
+#### Zimperium Server URL Endpoint
 
 This is going to be your root URL to your console (e.g., `https://ziap.zimperium.com` or `https://zc202.zimperium.com`).
 
-### Client ID
+#### Client ID
 
-This is from the `Authorizations` section when you generate your API Key.
+This is from the `Authorizations` section when you generate your API Key. See [Pre-requisites](#pre-requisites) for details on obtaining credentials.
 
-### Client Secret
+#### Client Secret
 
-Similar to Client ID however this is ONLY displayed when you first generated your key so be sure to save it or `Regenerate Secret`.
+Similar to `Client ID`, this is from the `Authorizations` section when you generate your API Key. See [Pre-requisites](#pre-requisites) for details on obtaining credentials.
 
-### Source Files
+#### Use Proxy
+
+When checked, the plugin will use HTTP Proxy settings configured on the `Manage Jenkins | System` page. Otherwise, the plugin will try to connect to the console directly.
+
+### Per-project Configuration
+
+In the `Configure` section of your project, `Add post-build action` and select `Upload build artifacts to zScan`.
+
+To reuse global configuration for the Zimperium Server (console), please leave the `Use Global Console Information` box checked.  If you need to specify a configuration unique to this project (e.g., a different set of credentials), uncheck the box and fill out the details.  Fields that need to be populated are the same as in the [Global Configuration](#global-configuration) section.
+
+Other fields that need to be configured:
+
+#### Source Files
 
 This provides ability to specify patterns to select files to be uploaded, multiple patterns are comma-separated (`*.apk, *.ipa` for example). To prevent accidental flooding of zScan servers, only the first 5 matches will be processed.
 
-### Excluded Files
+#### Excluded Files
 
 Opposite of above, provides ability to specify patterns to exclude files, multiple patterns are comma-separated (`*.md, *.java` for example).
 
-### Wait for Report
+#### Wait for Report
 
 If checked, the plugin will wait for an assessment report after uploading each binary. Reports take about 10 minutes to generate and the build step execution is paused while waiting. Report generation times out after 20 minutes to prevent 'stuck builds'.  If unchecked, the execution will move on to the next binary.  Reports can also be obtained from the zScan console
 
-### Report Format
+#### Report Format
 
 Specifies the format for the assessment report.  For more information on SARIF, please see [OASIS Open](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html).
 
-### Report File Name
+#### Report File Name
 
 Filename(s) for the assessment report(s). Assessment ID is appended to the filename to prevent multiple reports overwriting one another.
 
-## Advanced Configuration
+### Advanced Configuration
 
-### Team Name
+#### Team Name
 
 Team name to assign applications to. If no team name is provided or if a team with the provided name is not found, the 'Default' team is used.  
 
