@@ -9,12 +9,12 @@
                 <groupId>io.jenkins.tools.bom</groupId>
                 <!--
                     The version in the artifactId is related to the jenkins.version given later.
-                    We have jenkins.version = 2.387.3, so we use `bom-2.387.x`.
+                    We have jenkins.version = 2.492.3, so we use `bom-2.492.x`.
                     The not-very-obvious `version` value is found in this table:
                     https://github.com/jenkinsci/bom?tab=readme-ov-file#depending-on-older-versions
                 -->
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>4740.v75a_90f6fefb_7</version>
+                <version>4023.va_eeb_b_4e45f07</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -72,11 +72,11 @@
         <!--
             Take a look at the developer documentation for the baseline version to use
             https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/#currently-recommended-versions
-            At the moment, the Jenkins releases 2.452.4 and 2.462.3 make good core dependencies. 
-            You could also consider 2.479.1 if there are specific reasons, like new features, to want something newer.
-            ** We use 2.479.3 to be compatible with Java 17
+            At the moment, the Jenkins releases 2.479.3 and 2.492.3 make good core dependencies. 
+            You could also consider 2.504.1 if there are specific reasons, like new features, to want something newer.
+            ** We use 2.492 to be compatible with Java 17
         -->
-        <jenkins.baseline>2.479</jenkins.baseline>
+        <jenkins.baseline>2.492</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     </properties>
     <name>Upload to zScan</name>
