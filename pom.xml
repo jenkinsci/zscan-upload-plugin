@@ -14,7 +14,7 @@
                     https://github.com/jenkinsci/bom?tab=readme-ov-file#depending-on-older-versions
                 -->
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>4669.v0e99c712a_30e</version>
+                <version>4740.v75a_90f6fefb_7</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -61,7 +61,7 @@
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
         <!-- See https://github.com/jenkinsci/plugin-pom/releases for available versions -->
-        <version>5.14</version>
+        <version>5.17</version>
         <relativePath />
     </parent>
     <groupId>io.jenkins.plugins</groupId>
