@@ -48,9 +48,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import javax.servlet.ServletException;
 
 
 public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
@@ -60,6 +57,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public final static String toolName = "Jenkins";
     public final static long checkInterval = 30;
     public final static int reportTimeout = 1200;
+    public final static int connectionTimeout = 2 * 60 * 1000;
+    public final static int writeTimeout = 2 * 60 * 1000;
+    public final static int readTimeout = 60 * 1000;
 
     public final static Result DEFAULT_STEP_RESULT = Result.FAILURE;
     public final static int MAX_FILES_UPLOAD = 5;
@@ -67,38 +67,104 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public final static String DEFAULT_TEAM_NAME = "Default";
 
     // plugin settings
-    // mandatory
-    public String sourceFile;
-    public String excludedFile;
-    public String endpoint;
-    public String clientId;
-    public Secret clientSecret;
+    // console information
+    private Boolean useOwnConsoleInfo;
+    private String endpoint;
+    private String clientId;
+    private Secret clientSecret;
+    private Boolean useProxy;
 
-    // optional
+    // binaries
+    private String sourceFile;
+    private String excludedFile;
+
+    // report settings
     private Boolean waitForReport;
     private String reportFormat;
     private String reportFileName;
+
+    // advanced settings
     private String teamName;
 
     @DataBoundConstructor
-    public ZDevUploadPlugin(String sourceFile, String excludedFile, String endpoint, String clientId, Secret clientSecret) {
-        this.sourceFile = sourceFile;
-        this.excludedFile = excludedFile;
+    public ZDevUploadPlugin(Boolean useOwnConsoleInfo, String endpoint, String clientId, Secret clientSecret, Boolean useProxy, 
+                            String sourceFile, String excludedFile,
+                            Boolean waitForReport, String reportFormat, String reportFileName, 
+                            String teamName) {
+        this.useOwnConsoleInfo = useOwnConsoleInfo;
         this.endpoint = endpoint;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.useProxy = useProxy;
+        this.sourceFile = sourceFile;
+        this.excludedFile = excludedFile;
+        this.waitForReport = waitForReport;
+        this.reportFormat = reportFormat;
+        this.reportFileName = reportFileName;
+        this.teamName = teamName;
+    }
 
-        this.waitForReport = false;
-        this.reportFormat = "sarif";
-        this.reportFileName = DEFAULT_REPORT_FILE;
-        this.teamName = DEFAULT_TEAM_NAME; 
+
+    @DataBoundSetter
+    public void setUseOwnConsoleInfo(Boolean useOwnConsoleInfo) {
+        this.useOwnConsoleInfo = useOwnConsoleInfo;
+    }
+    public Boolean getUseOwnConsoleInfo() {
+        return useOwnConsoleInfo;
+    }
+
+    @DataBoundSetter
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
+    public String getEndpoint() {
+        return endpoint;
+    }
+
+    @DataBoundSetter
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+    public String getClientId() {
+        return clientId;
+    }
+
+    @DataBoundSetter
+    public void setClientSecret(Secret clientSecret) {
+        this.clientSecret = clientSecret;
+    }
+    public Secret getClientSecret() {
+        return clientSecret;
+    }
+
+    @DataBoundSetter
+    public void setUseProxy(Boolean useProxy) {
+        this.useProxy = useProxy;
+    }
+    public Boolean getUseProxy() {
+        return useProxy;
+    }
+
+    @DataBoundSetter
+    public void setSourceFile(String sourceFile) {
+        this.sourceFile = sourceFile;
+    }
+    public String getSourceFile() {
+        return sourceFile;
+    }
+
+    @DataBoundSetter
+    public void setExcludedFile(String excludedFile) {
+        this.excludedFile = excludedFile;
+    }
+    public String getExcludedFile() {
+        return excludedFile;
     }
 
     @DataBoundSetter
     public void setWaitForReport(Boolean waitForReport) {
         this.waitForReport = waitForReport;
     }
-
     public Boolean getWaitForReport() {
         return waitForReport;
     }
@@ -107,7 +173,6 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public void setReportFormat(String reportFormat) {
         this.reportFormat = reportFormat;
     }
-
     public String getReportFormat() {
         return reportFormat;
     }
@@ -116,7 +181,6 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public void setReportFileName(String reportFileName) {
         this.reportFileName = reportFileName;
     }
-
     public String getReportFileName() {
         return reportFileName;
     }
@@ -125,7 +189,6 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public void setTeamName(String teamName) {
         this.teamName = teamName;
     }
-
     public String getTeamName() {
         return teamName;
     }
@@ -149,20 +212,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             return;
         }
 
-        // create HTTP helper objects
-        OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
-                .writeTimeout(2, TimeUnit.MINUTES)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .build();
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(this.endpoint)
-                .client(okHttpClient)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        UploadPluginService service = retrofit.create(UploadPluginService.class);
-
+        // Check if there is anything to upload
         final Map<String, String> envVars = run.getEnvironment(listener);
 
         final String expanded = Util.replaceMacro(sourceFile, envVars);
@@ -175,13 +225,29 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             return;
         }
 
+        String effectiveEndpoint = (useOwnConsoleInfo) ? endpoint : getDescriptor().getGlobalEndpoint();
+        String effectiveClientId = (useOwnConsoleInfo) ? clientId : getDescriptor().getGlobalClientId();
+        Secret effectiveClientSecret = (useOwnConsoleInfo) ? clientSecret : getDescriptor().getGlobalClientSecret();
+        Boolean effectiveUseProxy = (useOwnConsoleInfo) ? useProxy : getDescriptor().getGlobalUseProxy();
+
+        // create HTTP helper objects
+        OkHttpClient okHttpClient = new ZDevHTTPClient().getHttpClient(effectiveUseProxy, connectionTimeout, writeTimeout, readTimeout);
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(effectiveEndpoint)
+                .client(okHttpClient)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        UploadPluginService service = retrofit.create(UploadPluginService.class);
+
         // Login and obtain a token
-        Call<LoginResponse> loginResponseCall = service.login(new LoginCredentials(this.clientId, Secret.toString(this.clientSecret)));
+        Call<LoginResponse> loginResponseCall = service.login(new LoginCredentials(effectiveClientId, Secret.toString(effectiveClientSecret)));
         Response<LoginResponse> response = loginResponseCall.execute();
         LoginResponse loginResponseBody = response.body();
 
         if (!response.isSuccessful() || loginResponseBody == null) {
-            log(console, "Unable to login with provided Client ID and Client Secret to " + this.endpoint);
+            log(console, "Unable to login with provided the credentials to " + effectiveEndpoint);
             run.setResult(DEFAULT_STEP_RESULT);
             return;
         }
@@ -213,7 +279,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                 }
 
                 File file = new File(localPath.getRemote());
-                log(console, "Uploading " + file.getName() + " (" + file.getAbsolutePath() + ") to " + this.endpoint);
+                log(console, "Uploading " + file.getName() + " (" + file.getAbsolutePath() + ") to " + effectiveEndpoint);
 
                 String branchName = (envVars.get("BRANCH_NAME") != null) ? envVars.get("BRANCH_NAME") : "";
                 String buildNumber = (envVars.get("BUILD_NUMBER") != null) ? envVars.get("BUILD_NUMBER") : "";
@@ -224,7 +290,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         .addFormDataPart("ciToolName", toolName)
                         .addFormDataPart("branchName", branchName)
                         .addFormDataPart("buildNumber", buildNumber)
-                        .addFormDataPart("buildFile", file.getName(), RequestBody.create(MediaType.parse("multipart/form-data"), file));
+                        .addFormDataPart("buildFile", file.getName(), RequestBody.create(file, MediaType.parse("multipart/form-data")));
                 RequestBody requestBody = multipartBody.build();
                 Call<ResponseBody> uploadCall = service.upload(authToken, requestBody);
 
@@ -233,7 +299,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                 long end = System.currentTimeMillis();
 
                 if (uploadResponse.isSuccessful()) {
-                    log(console, "Successfully uploaded " + fileName + " to " + this.endpoint + " (" + (end - start) + "ms)");
+                    log(console, "Successfully uploaded " + fileName + " to " + effectiveEndpoint + " (" + (end - start) + "ms)");
                     try(ResponseBody uploadResponseBody = uploadResponse.body()) {
                         // we're inside the try() block; exceptions will be caught  
                         @SuppressWarnings("null")
@@ -293,7 +359,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             JsonObject jsonPayload = new JsonObject();
                                             jsonPayload.addProperty("teamId", teamId);
 
-                                            RequestBody assignRequestBody = RequestBody.create(MediaType.parse("application/json"), jsonPayload.toString());
+                                            RequestBody assignRequestBody = RequestBody.create(jsonPayload.toString(), MediaType.parse("application/json"));
                                             Call<ResponseBody> assignCall = service.assignTeam(zdevAppId, authToken, assignRequestBody);
                                             Response<ResponseBody> assignResponse = assignCall.execute();
 
@@ -489,7 +555,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                     totalCount++;
                 } else {
-                    log(console, "An error (HTTP " + uploadResponse.code() + ") occurred while trying to upload " + fileName + " to " + this.endpoint);
+                    log(console, "An error (HTTP " + uploadResponse.code() + ") occurred while trying to upload " + fileName + " to " + effectiveEndpoint);
                     ResponseBody uploadResponseBody = uploadResponse.errorBody();
                     if(uploadResponseBody != null) {
                         log(console, "Error message: " + uploadResponseBody.string());
@@ -520,21 +586,13 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     }
 
     @Extension
-    @Symbol("zScan Upload")
+    @Symbol("zScanUpload")
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
         
-        private String sourceFile;
-        private String excludedFile;
-        private String endpoint;
-        private String clientId;
-        private String clientSecret;
-        private Boolean waitForReport;
-
-        // advanced
-        public String reportFormat;
-        public String reportFileName;
-        public String teamName; 
-        
+        private String globalEndpoint;
+        private String globalClientId;
+        private Secret globalClientSecret;
+        private Boolean globalUseProxy;
 
         public DescriptorImpl() {
             load();
@@ -550,61 +608,40 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             return "Upload build artifacts to zScan";
         }
 
-        public FormValidation doCheckEndpoint(@QueryParameter String value) throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Endpoint cannot be blank.");
-            }
-            return FormValidation.ok();
-        }
-
         @Override
         public boolean configure(StaplerRequest2 req, JSONObject formData) throws FormException {
-            sourceFile = formData.getString("sourceFile");
-            excludedFile = formData.getString("excludedFile");
-            endpoint = formData.getString("endpoint");
-            clientId = formData.getString("clientId");
-            clientSecret = formData.getString("clientSecret");
-            waitForReport = formData.getBoolean("waitForReport");
-            // Advanced
-            reportFormat = formData.getString("reportFormat");
-            reportFileName = formData.getString("reportFileName");
-            teamName = formData.getString("teamName");
-
+            JSONObject zscanData = formData.getJSONObject("zscan");
+            req.bindJSON(this, zscanData); 
             save();
             return super.configure(req, formData);
         }
 
-        
-        public String getSourceFile() { return sourceFile; }
-
-        public String getExcludedFile() { return excludedFile; }
-
-        public String getEndpoint() {
-            return endpoint;
+        public void setGlobalEndpoint(String globalEndpoint) {
+            this.globalEndpoint = globalEndpoint;
+        }
+        public String getGlobalEndpoint() {
+            return globalEndpoint;
         }
 
-        public String getClientId() {
-            return clientId;
+        public void setGlobalClientId(String globalClientId) {
+            this.globalClientId = globalClientId;
+        }
+        public String getGlobalClientId() {
+            return globalClientId;
         }
 
-        public String getClientSecret() {
-            return clientSecret;
+        public void setGlobalClientSecret(Secret globalClientSecret) {
+            this.globalClientSecret = globalClientSecret;
+        }
+        public Secret getGlobalClientSecret() {
+            return globalClientSecret;
         }
 
-        public Boolean getWaitForReport() {
-            return waitForReport;
+        public void setGlobalUseProxy(Boolean globalUseProxy) {
+            this.globalUseProxy = globalUseProxy;
         }
-
-        public String getReportFormat() {
-            return reportFormat;
-        }
-
-        public String getReportFileName() {
-            return reportFileName;
-        }
-
-        public String getTeamName() {
-            return teamName;
+        public Boolean getGlobalUseProxy() {
+            return globalUseProxy;
         }
 
         public String getDefaultReportFileName() {
@@ -622,8 +659,37 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         public FormValidation doValidateCredentials(
             @QueryParameter("endpoint") final String endpoint,
             @QueryParameter("clientId") final String clientId, 
-            @QueryParameter("clientSecret") final String clientSecret,
+            @QueryParameter("clientSecret") final Secret clientSecret,
+            @QueryParameter("useProxy") final Boolean useProxy,
             @AncestorInPath Item item) {
+
+            return checkConsoleInformation(item, endpoint, clientId, globalClientSecret, useProxy);
+        }
+
+        // Validate global credentials by trying to obtain access token
+        // This method can be executed by anyone with job configuration permission
+        // Only the response code is checked
+        @POST
+        public FormValidation doValidateGlobalCredentials(
+            @QueryParameter("globalEndpoint") final String globalEndpoint,
+            @QueryParameter("globalClientId") final String globalClientId, 
+            @QueryParameter("globalClientSecret") final Secret globalClientSecret,
+            @QueryParameter("globalUseProxy") final Boolean globalUseProxy,
+            @AncestorInPath Item item) {
+
+            return checkConsoleInformation(item, globalEndpoint, globalClientId, globalClientSecret, globalUseProxy);
+        }
+
+        private FormValidation checkConsoleInformation(Item item, String endpoint, String clientId, Secret clientSecret, Boolean useProxy) {
+            if (StringUtils.isBlank(endpoint)) {
+                return FormValidation.error("Endpoint is required");
+            }
+            if (StringUtils.isBlank(clientId)) {
+                return FormValidation.error("Client ID is required");
+            }
+            if (clientSecret == null || StringUtils.isBlank(Secret.toString(clientSecret))) {
+                return FormValidation.error("Client Secret is required");
+            }
 
             try {
                 if(item == null){
@@ -632,10 +698,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                     item.checkPermission(Item.CONFIGURE);
                 }
 
-                OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
-                    .writeTimeout(2, TimeUnit.MINUTES)
-                    .readTimeout(60, TimeUnit.SECONDS)
-                    .build();
+                OkHttpClient okHttpClient = new ZDevHTTPClient().getHttpClient(useProxy, connectionTimeout, writeTimeout, readTimeout);
 
                 Retrofit retrofit = new Retrofit.Builder()
                         .baseUrl(endpoint)
@@ -645,7 +708,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                 UploadPluginService service = retrofit.create(UploadPluginService.class);
 
-                Call<LoginResponse> loginResponseCall = service.login(new LoginCredentials(clientId, clientSecret));
+                Call<LoginResponse> loginResponseCall = service.login(new LoginCredentials(clientId, Secret.toString(clientSecret)));
                 Response<LoginResponse> response = loginResponseCall.execute();
 
                 if (!response.isSuccessful() || response.body() == null) {
@@ -665,7 +728,8 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                 return FormValidation.error("Error validating credentials: " + e.getLocalizedMessage());
             }
 
-            return FormValidation.ok("Success");
+            // If we get here, the credentials are valid        
+            return FormValidation.ok("Credentials are valid");
         }
     }
 

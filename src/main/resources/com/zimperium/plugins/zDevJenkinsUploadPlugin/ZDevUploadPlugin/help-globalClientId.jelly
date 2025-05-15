@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>This is the Client ID from zConsole. Please consult documentation for instructions on obtaining API credentials. <b>Note:</b> This setting will apply to all projects, unless overwritten by an individual project configuration.</div>

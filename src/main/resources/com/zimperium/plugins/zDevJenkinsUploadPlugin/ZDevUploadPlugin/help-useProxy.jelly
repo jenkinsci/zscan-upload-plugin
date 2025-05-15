@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>If checked, the plugin will use HTTP proxy settings defined in the global Jenkins configuration.</div>
