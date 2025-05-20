@@ -80,7 +80,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
     // report settings
     private Boolean waitForReport;
-    private String reportFormat;
+    private ReportFormat reportFormat;
     private String reportFileName;
 
     // advanced settings
@@ -89,7 +89,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     @DataBoundConstructor
     public ZDevUploadPlugin(Boolean useOwnConsoleInfo, String endpoint, String clientId, Secret clientSecret, Boolean useProxy, 
                             String sourceFile, String excludedFile,
-                            Boolean waitForReport, String reportFormat, String reportFileName, 
+                            Boolean waitForReport, ReportFormat reportFormat, String reportFileName, 
                             String teamName) {
         this.useOwnConsoleInfo = useOwnConsoleInfo;
         this.endpoint = endpoint;
@@ -170,10 +170,10 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     }
 
     @DataBoundSetter
-    public void setReportFormat(String reportFormat) {
+    public void setReportFormat(ReportFormat reportFormat) {
         this.reportFormat = reportFormat;
     }
-    public String getReportFormat() {
+    public ReportFormat getReportFormat() {
         return reportFormat;
     }
 
@@ -486,15 +486,16 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                             if(!assessmentId.isEmpty()) {
                                 // get the actual report
                                 log(console, "Retrieving report for assessment " + assessmentId);
+                                String reportFormatString = reportFormat.getDescription().toLowerCase();
 
-                                Call<ResponseBody> reportCall = service.downloadReport(assessmentId, reportFormat, authToken);
+                                Call<ResponseBody> reportCall = service.downloadReport(assessmentId, reportFormatString, authToken);
                                 Response<ResponseBody> reportResponse = reportCall.execute();
                                 ResponseBody reportResponseBody = reportResponse.body();
 
                                 if(reportResponse.isSuccessful() && reportResponseBody != null) {
                                     boolean reportSuccess = false;
                                     long bytesWritten = 0;
-                                    File reportFile = File.createTempFile("zScan-report-", ".json");
+                                    File reportFile = File.createTempFile("zScan-report-", "." + reportFormatString);
                                     try( InputStream inputStream = reportResponseBody.byteStream(); OutputStream outputStream = new FileOutputStream(reportFile); ) {
                                         byte[] buffer = new byte[4096];
 
@@ -518,7 +519,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                                     if(reportSuccess && bytesWritten > 0) {
                                         // append assessment id to the filename
-                                        String effectiveReportFileName = FilenameUtils.removeExtension(reportFileName) + "-" + assessmentId + "." + FilenameUtils.getExtension(reportFileName);
+                                        String effectiveReportFileName = (reportFileName.isEmpty()) ? 
+                                                "zScan-report-" + assessmentId + "." + reportFormatString :
+                                                FilenameUtils.removeExtension(reportFileName) + "-" + assessmentId + "." + FilenameUtils.getExtension(reportFileName);
 
                                         try {
                                             // copy the report to the workspace
@@ -583,6 +586,21 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     @Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl) super.getDescriptor();
+    }
+
+    public static enum ReportFormat {
+
+        JSON("JSON"),
+        SARIF("SARIF");
+
+        private final String description;
+        
+        ReportFormat(String description) {
+            this.description = description;
+        }
+        public String getDescription() {
+            return description;
+        }
     }
 
     @Extension
