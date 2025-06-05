@@ -14,7 +14,7 @@
                     https://github.com/jenkinsci/bom?tab=readme-ov-file#depending-on-older-versions
                 -->
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>4770.v9a_2b_7a_9d8b_7f</version>
+                <version>4862.vc32a_71c3e731</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -69,26 +69,7 @@
         <version>5.17</version>
         <relativePath />
     </parent>
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.jenkins-ci.tools</groupId>
-                    <artifactId>maven-hpi-plugin</artifactId>
-                    <version>3.65</version>
-                    <executions>
-                        <execution>
-                            <id>default-validate-hpi</id>
-                            <phase>validate</phase>
-                            <goals>
-                                <goal>validate-hpi</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
+
     <groupId>io.jenkins.plugins</groupId>
     <artifactId>zscan-upload</artifactId>
     <version>2.4.0</version>
