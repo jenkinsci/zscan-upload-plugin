@@ -87,7 +87,7 @@
     </properties>
     <name>Upload to zScan</name>
     <description>This plugin uploads build artifacts to Zimperium zScan for app analysis</description>
-    <url>https://github.com/Zimperium/zscan-plugin-jenkins</url>
+    <url>https://github.com/jenkinsci/zscan-upload-plugin</url>
     <licenses>
         <license>
             <name>MIT License</name>
@@ -95,19 +95,10 @@
         </license>
     </licenses>
     <scm>
-        <url>https://github.com/Zimperium/zscan-plugin-jenkins</url>
-        <connection>scm:git:https://github.com/Zimperium/zscan-plugin-jenkins</connection>
-        <developerConnection>scm:git:https://github.com/Zimperium/zscan-plugin-jenkins</developerConnection>
-      <tag>zscan-upload-2.4.2</tag>
-  </scm>
-    <!-- Assuming you want to host on @jenkinsci:
-    <url>https://wiki.jenkins.io/display/JENKINS/TODO+Plugin</url>
-    <scm>
         <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     </scm>
-    -->
     <repositories>
         <repository>
             <id>repo.jenkins-ci.org</id>
