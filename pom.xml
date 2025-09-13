@@ -58,8 +58,7 @@
         </dependency>
         <dependency>
             <groupId>io.jenkins.plugins</groupId>
-            <artifactId>commons-lang-api</artifactId>
-            <version>2.6.0</version>
+            <artifactId>commons-lang3-api</artifactId>
         </dependency>
     </dependencies>
     <parent>
@@ -80,7 +79,7 @@
             https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/#currently-recommended-versions
             At the moment, the Jenkins releases 2.479.3 and 2.492.3 make good core dependencies. 
             You could also consider 2.504.1 if there are specific reasons, like new features, to want something newer.
-            ** We use 2.492 to be compatible with Java 17
+            ** We use 2.492 for now
         -->
         <jenkins.baseline>2.492</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.3</jenkins.version>
