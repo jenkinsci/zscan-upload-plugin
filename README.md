@@ -6,7 +6,7 @@ zScan is part of the [Zimperium MAPS](https://www.zimperium.com/mobile-app-prote
 
 ## Pre-requisites
 
-This project requires Java 17 or higher to build. All of the 3rd-party jars we're using are compiled with Java 17.  
+This project requires Java 17 or higher to build.
 
 A Zimperium Console account with a zScan (MAPS) license is required.  In your console, head over to the *Authorizations* tab in the *Account Management* section and generate a new API key that at least has the permissions of `zScan Builds - Upload`.  If assessment reports are required, the `zScan Assessments - View` permission is also necessary.
 
@@ -27,7 +27,7 @@ For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` s
 
 ## Installation
 
-The easiest way to install this plugin is from the Jenkins Marketplace.  If you prefer manual installation, follow these steps:
+The easiest way to install this plugin is from the [Jenkins Marketplace](https://plugins.jenkins.io/zscan-upload/).  If you prefer manual installation, follow these steps:
 
 1. Download one of the official releases from this repo or build one yourself using the above instructions.
 2. Manage Jenkins -> Manage Plugins -> Advanced tab -> Deploy Plugin -> Choose file (`zscan-upload.hpi`)
