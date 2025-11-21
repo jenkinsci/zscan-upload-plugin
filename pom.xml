@@ -9,12 +9,12 @@
                 <groupId>io.jenkins.tools.bom</groupId>
                 <!--
                     The version in the artifactId is related to the jenkins.version given later.
-                    We have jenkins.version = 2.492.3, so we use `bom-2.492.x`.
+                    We have jenkins.version = 2.516.3, so we use `bom-2.516.x`.
                     The not-very-obvious `version` value is found in this table:
                     https://github.com/jenkinsci/bom?tab=readme-ov-file#depending-on-older-versions
                 -->
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>5324.v88b_4300d0dd9</version>
+                <version>5701.va_b_018a_a_6b_0d3</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -61,11 +61,12 @@
             <artifactId>commons-lang3-api</artifactId>
         </dependency>
     </dependencies>
+
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
         <!-- See https://github.com/jenkinsci/plugin-pom/releases for available versions -->
-        <version>5.24</version>
+        <version>5.28</version>
         <relativePath />
     </parent>
 
@@ -77,12 +78,15 @@
         <!--
             Take a look at the developer documentation for the baseline version to use
             https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/#currently-recommended-versions
-            At the moment, the Jenkins releases 2.479.3 and 2.492.3 make good core dependencies. 
-            You could also consider 2.504.1 if there are specific reasons, like new features, to want something newer.
-            ** We use 2.492 for now
+            At the moment, the Jenkins releases 2.504.3 and 2.516.3 make good core dependencies. 
+            You could also consider 2.528.1 if there are specific reasons, like new features, to want something newer.
+            ** We use 2.516 for now
         -->
-        <jenkins.baseline>2.492</jenkins.baseline>
+        <jenkins.baseline>2.516</jenkins.baseline>
         <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <ban-junit4-imports.skip>true</ban-junit4-imports.skip>
+        <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+        <hpi.bundledArtifacts>annotations,converter-gson,kotlin-stdlib,retrofit</hpi.bundledArtifacts>
     </properties>
     <name>Upload to zScan</name>
     <description>This plugin uploads build artifacts to Zimperium zScan for app analysis</description>
@@ -94,10 +98,10 @@
         </license>
     </licenses>
     <scm>
-        <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+        <connection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-      <tag>zscan-upload-2.4.3</tag>
+      <tag>zscan-upload-2.4.5</tag>
   </scm>
     <repositories>
         <repository>
