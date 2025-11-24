@@ -55,11 +55,11 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     // constants
     public final static String toolId = "JKNS";
     public final static String toolName = "Jenkins";
-    public final static long checkInterval = 30;
-    public final static int reportTimeout = 1200;
-    public final static int connectionTimeout = 2 * 60 * 1000;
-    public final static int writeTimeout = 2 * 60 * 1000;
-    public final static int readTimeout = 60 * 1000;
+    public final static long checkInterval = 30 * 1000; // 30 seconds
+    public final static int reportTimeout = 30 * 60 * 1000; // 30 minutes
+    public final static int connectionTimeout = 2 * 60 * 1000; // 2 minutes
+    public final static int writeTimeout = 2 * 60 * 1000; // 2 minutes
+    public final static int readTimeout = 60 * 1000; // 1 minute
 
     public final static Result DEFAULT_STEP_RESULT = Result.FAILURE;
     public final static int MAX_FILES_UPLOAD = 5;
@@ -302,7 +302,6 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                     log(console, "Successfully uploaded " + fileName + " to " + effectiveEndpoint + " (" + (end - start) + "ms)");
                     try(ResponseBody uploadResponseBody = uploadResponse.body()) {
                         // we're inside the try() block; exceptions will be caught  
-                        @SuppressWarnings("null")
                         JsonObject jsonObject = JsonParser.parseString(uploadResponseBody.string()).getAsJsonObject();
 
                         // Extract the appId needed for team assignment, buildId to check report status, and the current team 
@@ -316,7 +315,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                             // need to wait a bit; otherwise we can get 404
                             synchronized(this) {
-                                wait(checkInterval * 1000);
+                                wait(checkInterval);
                             }
 
                             // get the list of teams to figure out team id
@@ -424,14 +423,13 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         // wait for the report, if configured
                         if(waitForReport) {
                             start = System.currentTimeMillis();
-                            end = start + reportTimeout * 1000;
+                            end = start + reportTimeout;
                             while( System.currentTimeMillis() < end ) {
                                 Call<ResponseBody> statusCall = service.checkStatus(buildId, authToken);
                                 Response<ResponseBody> statusResponse = statusCall.execute();
                                 if(statusResponse.isSuccessful()) {
                                     try(ResponseBody statusBody = statusResponse.body()) {
                                         // we're inside the try() block; exceptions will be caught
-                                        @SuppressWarnings("null")
                                         JsonObject statusObject = JsonParser.parseString(statusBody.string()).getAsJsonObject();
                                         String scanStatus = statusObject.getAsJsonObject("zdevMetadata").get("analysis").getAsString();
                                         log(console, "Scan status = " + scanStatus);
@@ -441,7 +439,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             // need to pause before continuing to make sure reports are available
                                             log(console, "Waiting for the report to become available...");
                                             synchronized(this) {
-                                                wait(checkInterval * 1000);
+                                                wait(checkInterval);
                                             }
                                             break;
                                         }
@@ -464,7 +462,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                 }
                                 
                                 synchronized(this) {
-                                    wait(checkInterval * 1000);
+                                    wait(checkInterval);
                                 }
                             }
 
@@ -483,7 +481,11 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                 authToken = "Bearer " + newAccessToken;
                             }
 
-                            if(!assessmentId.isEmpty()) {
+                            if(assessmentId.isEmpty()) {
+                                // we've timed out waiting for report
+                                log(console, "Timeout (" + reportTimeout/(60 * 1000) + " min) waiting for the report; moving on. Report can be downloaded from the console after the scan is complete.");
+                            }
+                            else {
                                 // get the actual report
                                 log(console, "Retrieving report for assessment " + assessmentId);
                                 String reportFormatString = reportFormat.getDescription().toLowerCase();

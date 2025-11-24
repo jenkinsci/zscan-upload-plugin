@@ -6,7 +6,6 @@ import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -38,15 +37,17 @@ public class ZDevHTTPClient {
                             Base64.getEncoder() // get the base64 encoder
                                     .encode(proxyUserInfo.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
                     Authenticator _httpProxyAuth = new Authenticator() {
-                        @Nullable
                         @Override
                         public Request authenticate(Route route, Response response) throws IOException {
                             return response.request().newBuilder()
                                     .addHeader("Proxy-Authorization", "Basic " + basicAuth) // add auth
                                     .build();
                         }
-                    } ;
-                    return okClientBuilder.proxyAuthenticator(_httpProxyAuth).proxy(_httpProxy).build();
+                    };
+                    if(_httpProxyAuth != null) {
+                        return okClientBuilder.proxyAuthenticator(_httpProxyAuth).proxy(_httpProxy).build();
+                    }
+                    // otherwise, try without authentication
                 }
                 // if no authentication is required, just set the proxy
                 return okClientBuilder.proxy(_httpProxy).build();
