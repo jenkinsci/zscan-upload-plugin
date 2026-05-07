@@ -58,8 +58,8 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public final static long checkInterval = 30 * 1000; // 30 seconds
     public final static int reportTimeout = 30 * 60 * 1000; // 30 minutes
     public final static int connectionTimeout = 2 * 60 * 1000; // 2 minutes
-    public final static int writeTimeout = 2 * 60 * 1000; // 2 minutes
-    public final static int readTimeout = 60 * 1000; // 1 minute
+    public final static int writeTimeout = 10 * 60 * 1000; // 10 minutes
+    public final static int readTimeout = 10 * 60 * 1000; // 10 minutes
 
     public final static Result DEFAULT_STEP_RESULT = Result.FAILURE;
     public final static int MAX_FILES_UPLOAD = 5;

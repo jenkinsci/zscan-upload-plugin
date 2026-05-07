@@ -14,9 +14,14 @@
                     https://github.com/jenkinsci/bom?tab=readme-ov-file#depending-on-older-versions
                 -->
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>5701.va_b_018a_a_6b_0d3</version>
+                <version>6210.v69ea_fd8a_f010</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>2.2.21</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -66,7 +71,7 @@
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
         <!-- See https://github.com/jenkinsci/plugin-pom/releases for available versions -->
-        <version>5.28</version>
+        <version>6.2153.vcf31911d10c4</version>
         <relativePath />
     </parent>
 
