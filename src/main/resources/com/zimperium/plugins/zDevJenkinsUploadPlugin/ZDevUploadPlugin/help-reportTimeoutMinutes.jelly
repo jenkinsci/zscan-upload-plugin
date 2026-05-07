@@ -1,0 +1,6 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
+    <div>
+        The maximum amount of time (in minutes) to wait for the zScan report to be generated after the scan completes. <strong>Default:</strong> 30 minutes.
+    </div>
+</j:jelly>

@@ -56,7 +56,6 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public final static String toolId = "JKNS";
     public final static String toolName = "Jenkins";
     public final static long checkInterval = 30 * 1000; // 30 seconds
-    public final static int reportTimeout = 30 * 60 * 1000; // 30 minutes
     public final static int connectionTimeout = 2 * 60 * 1000; // 2 minutes
     public final static int writeTimeout = 10 * 60 * 1000; // 10 minutes
     public final static int readTimeout = 10 * 60 * 1000; // 10 minutes
@@ -85,12 +84,13 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
     // advanced settings
     private String teamName;
+    private Integer reportTimeoutMinutes;
 
     @DataBoundConstructor
     public ZDevUploadPlugin(Boolean useOwnConsoleInfo, String endpoint, String clientId, Secret clientSecret, Boolean useProxy, 
                             String sourceFile, String excludedFile,
                             Boolean waitForReport, ReportFormat reportFormat, String reportFileName, 
-                            String teamName) {
+                            String teamName, Integer reportTimeoutMinutes) {
         this.useOwnConsoleInfo = useOwnConsoleInfo;
         this.endpoint = endpoint;
         this.clientId = clientId;
@@ -102,6 +102,8 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         this.reportFormat = reportFormat;
         this.reportFileName = reportFileName;
         this.teamName = teamName;
+        //this.reportTimeoutMinutes = reportTimeoutMinutes != null ? reportTimeoutMinutes : 30;
+        this.reportTimeoutMinutes = reportTimeoutMinutes;
     }
 
 
@@ -191,6 +193,18 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     }
     public String getTeamName() {
         return teamName;
+    }
+
+    @DataBoundSetter
+    public void setReportTimeoutMinutes(Integer reportTimeoutMinutes) {
+        this.reportTimeoutMinutes = reportTimeoutMinutes;
+    }
+    public Integer getReportTimeoutMinutes() {
+        return reportTimeoutMinutes;
+    }
+    
+    private long getReportTimeoutMillis() {
+        return (long) reportTimeoutMinutes * 60 * 1000;
     }
 
     private void log(final PrintStream logger, final String message) {
@@ -423,7 +437,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         // wait for the report, if configured
                         if(waitForReport) {
                             start = System.currentTimeMillis();
-                            end = start + reportTimeout;
+                            end = start + getReportTimeoutMillis();
                             while( System.currentTimeMillis() < end ) {
                                 Call<ResponseBody> statusCall = service.checkStatus(buildId, authToken);
                                 Response<ResponseBody> statusResponse = statusCall.execute();
@@ -483,7 +497,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                             if(assessmentId.isEmpty()) {
                                 // we've timed out waiting for report
-                                log(console, "Timeout (" + reportTimeout/(60 * 1000) + " min) waiting for the report; moving on. Report can be downloaded from the console after the scan is complete.");
+                                log(console, "Timeout (" + reportTimeoutMinutes + " min) waiting for the report; moving on. Report can be downloaded from the console after the scan is complete.");
                             }
                             else {
                                 // get the actual report
