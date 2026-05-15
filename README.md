@@ -93,7 +93,7 @@ Team name to assign applications to. If no team name is provided or if a team wi
 
 #### Report Timeout
 
-Timeout (in minutes) to wait for the scan report. If report is not ready in time, the execution will continue and no error will be returned. A message will be printed to the log and the report will be available via the Zimperium console.  Default value is 30. 
+Timeout (in minutes) to wait for the scan report. If report is not ready in time, the execution will continue and no error will be returned. A message will be printed to the log and the report will be available via the Zimperium console.  Default value is 30.
 
 **Note:** The timeout value applies to *all* files processed by the plugin, so the maximum time the job will be blocked is the `Report Timeout` times the number of `Source Files`, plus some overhead.
 

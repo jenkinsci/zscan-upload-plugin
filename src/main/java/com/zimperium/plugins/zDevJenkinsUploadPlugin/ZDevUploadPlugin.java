@@ -64,6 +64,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public final static int MAX_FILES_UPLOAD = 5;
     public final static String DEFAULT_REPORT_FILE = "zscan-report.json";
     public final static String DEFAULT_TEAM_NAME = "Default";
+    public final static Integer DEFAULT_REPORT_TIMEOUT_MINUTES = 30;
 
     // plugin settings
     // console information
@@ -83,8 +84,8 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     private String reportFileName;
 
     // advanced settings
-    private String teamName;
-    private Integer reportTimeoutMinutes;
+    private String teamName = DEFAULT_TEAM_NAME;
+    private Integer reportTimeoutMinutes = DEFAULT_REPORT_TIMEOUT_MINUTES;
 
     @DataBoundConstructor
     public ZDevUploadPlugin(Boolean useOwnConsoleInfo, String endpoint, String clientId, Secret clientSecret, Boolean useProxy, 
@@ -100,10 +101,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         this.excludedFile = excludedFile;
         this.waitForReport = waitForReport;
         this.reportFormat = reportFormat;
-        this.reportFileName = reportFileName;
-        this.teamName = teamName;
-        //this.reportTimeoutMinutes = reportTimeoutMinutes != null ? reportTimeoutMinutes : 30;
-        this.reportTimeoutMinutes = reportTimeoutMinutes;
+        this.reportFileName = reportFileName != null ? reportFileName : DEFAULT_REPORT_FILE;
+        this.teamName = teamName != null ? teamName : DEFAULT_TEAM_NAME;
+        this.reportTimeoutMinutes = reportTimeoutMinutes != null ? reportTimeoutMinutes : DEFAULT_REPORT_TIMEOUT_MINUTES;
     }
 
 
@@ -189,7 +189,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
     @DataBoundSetter
     public void setTeamName(String teamName) {
-        this.teamName = teamName;
+        this.teamName = teamName != null ? teamName : DEFAULT_TEAM_NAME;
     }
     public String getTeamName() {
         return teamName;
@@ -197,7 +197,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
     @DataBoundSetter
     public void setReportTimeoutMinutes(Integer reportTimeoutMinutes) {
-        this.reportTimeoutMinutes = reportTimeoutMinutes;
+        this.reportTimeoutMinutes = reportTimeoutMinutes != null ? reportTimeoutMinutes : DEFAULT_REPORT_TIMEOUT_MINUTES;
     }
     public Integer getReportTimeoutMinutes() {
         return reportTimeoutMinutes;
@@ -684,6 +684,10 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
         public String getDefaultTeamName() {
             return DEFAULT_TEAM_NAME;
+        }
+
+        public Integer getDefaultReportTimeoutMinutes() {
+            return DEFAULT_REPORT_TIMEOUT_MINUTES;
         }
 
         // Validate credentials by trying to obtain access token
