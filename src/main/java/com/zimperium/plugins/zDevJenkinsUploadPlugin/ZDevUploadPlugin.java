@@ -200,11 +200,12 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         this.reportTimeoutMinutes = reportTimeoutMinutes != null ? reportTimeoutMinutes : DEFAULT_REPORT_TIMEOUT_MINUTES;
     }
     public Integer getReportTimeoutMinutes() {
-        return reportTimeoutMinutes;
+        return (reportTimeoutMinutes != null) ? reportTimeoutMinutes : DEFAULT_REPORT_TIMEOUT_MINUTES;
     }
     
     private long getReportTimeoutMillis() {
-        return (long) reportTimeoutMinutes * 60 * 1000;
+        Integer timeout = (reportTimeoutMinutes != null) ? reportTimeoutMinutes : DEFAULT_REPORT_TIMEOUT_MINUTES;
+        return (long) timeout * 60 * 1000;
     }
 
     private void log(final PrintStream logger, final String message) {
