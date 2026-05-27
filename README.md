@@ -6,7 +6,7 @@ zScan is part of the [Zimperium MAPS](https://www.zimperium.com/mobile-app-prote
 
 ## Pre-requisites
 
-This project requires Java 17 or higher to build.
+This project requires Java 21 or higher to build and run, as lower versions are no longer supported by Jenkins.
 
 A Zimperium Console account with a zScan (MAPS) license is required.  In your console, head over to the *Authorizations* tab in the *Account Management* section and generate a new API key that at least has the permissions of `zScan Builds - Upload`.  If assessment reports are required, the `zScan Assessments - View` permission is also necessary.
 
@@ -90,6 +90,12 @@ Filename(s) for the assessment report(s). Assessment ID is appended to the filen
 Team name to assign applications to. If no team name is provided or if a team with the provided name is not found, the 'Default' team is used.  
 
 **Note:** The API key must have additional permissions to be able to manage team assignment: `Common - Teams - Manage` and `zScan Apps - Manage`.  This setting is only relevant when uploading an application for the first time. To change the application's team, please use the zScan Console.
+
+#### Report Timeout
+
+Timeout (in minutes) to wait for the scan report. If report is not ready in time, the execution will continue and no error will be returned. A message will be printed to the log and the report will be available via the Zimperium console.  Default value is 30.
+
+**Note:** The timeout value applies to *all* files processed by the plugin, so the maximum time the job will be blocked is the `Report Timeout` *times* the number of `Source Files`, plus some overhead.
 
 ## References
 
