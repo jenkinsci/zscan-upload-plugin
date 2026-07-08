@@ -47,6 +47,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -80,8 +82,12 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
     // report settings
     private Boolean waitForReport;
-    private ReportFormat reportFormat;
-    private String reportFileName;
+    private ReportFormat reportFormat = ReportFormat.JSON;
+    private String reportFileName = DEFAULT_REPORT_FILE;
+    private Boolean evaluateBuildStatusOnScanFindings = false;
+    private ScanStatusAction scanStatusAction = ScanStatusAction.UNSTABLE;
+    private ScanEvaluationMode scanEvaluationMode = ScanEvaluationMode.ANY_FINDING;
+    private Severity minimumSeverity = Severity.LOW;
 
     // advanced settings
     private String teamName = DEFAULT_TEAM_NAME;
@@ -91,6 +97,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     public ZDevUploadPlugin(Boolean useOwnConsoleInfo, String endpoint, String clientId, Secret clientSecret, Boolean useProxy, 
                             String sourceFile, String excludedFile,
                             Boolean waitForReport, ReportFormat reportFormat, String reportFileName, 
+                            Boolean evaluateBuildStatusOnScanFindings, ScanStatusAction scanStatusAction, ScanEvaluationMode scanEvaluationMode, Severity minimumSeverity,
                             String teamName, Integer reportTimeoutMinutes) {
         this.useOwnConsoleInfo = useOwnConsoleInfo;
         this.endpoint = endpoint;
@@ -100,8 +107,12 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         this.sourceFile = sourceFile;
         this.excludedFile = excludedFile;
         this.waitForReport = waitForReport;
-        this.reportFormat = reportFormat;
+        this.reportFormat = reportFormat != null ? reportFormat : ReportFormat.JSON;
         this.reportFileName = reportFileName != null ? reportFileName : DEFAULT_REPORT_FILE;
+        this.evaluateBuildStatusOnScanFindings = evaluateBuildStatusOnScanFindings != null ? evaluateBuildStatusOnScanFindings : false;
+        this.scanStatusAction = scanStatusAction != null ? scanStatusAction : ScanStatusAction.UNSTABLE;
+        this.scanEvaluationMode = scanEvaluationMode != null ? scanEvaluationMode : ScanEvaluationMode.ANY_FINDING;
+        this.minimumSeverity = minimumSeverity != null ? minimumSeverity : Severity.LOW;
         this.teamName = teamName != null ? teamName : DEFAULT_TEAM_NAME;
         this.reportTimeoutMinutes = reportTimeoutMinutes != null ? reportTimeoutMinutes : DEFAULT_REPORT_TIMEOUT_MINUTES;
     }
@@ -185,6 +196,38 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     }
     public String getReportFileName() {
         return reportFileName;
+    }
+
+    @DataBoundSetter
+    public void setScanStatusAction(ScanStatusAction scanStatusAction) {
+        this.scanStatusAction = scanStatusAction != null ? scanStatusAction : ScanStatusAction.UNSTABLE;
+    }
+    public ScanStatusAction getScanStatusAction() {
+        return scanStatusAction != null ? scanStatusAction : ScanStatusAction.UNSTABLE;
+    }
+
+    @DataBoundSetter
+    public void setEvaluateBuildStatusOnScanFindings(Boolean evaluateBuildStatusOnScanFindings) {
+        this.evaluateBuildStatusOnScanFindings = evaluateBuildStatusOnScanFindings;
+    }
+    public Boolean getEvaluateBuildStatusOnScanFindings() {
+        return evaluateBuildStatusOnScanFindings != null ? evaluateBuildStatusOnScanFindings : false;
+    }
+
+    @DataBoundSetter
+    public void setScanEvaluationMode(ScanEvaluationMode scanEvaluationMode) {
+        this.scanEvaluationMode = scanEvaluationMode != null ? scanEvaluationMode : ScanEvaluationMode.ANY_FINDING;
+    }
+    public ScanEvaluationMode getScanEvaluationMode() {
+        return scanEvaluationMode != null ? scanEvaluationMode : ScanEvaluationMode.ANY_FINDING;
+    }
+
+    @DataBoundSetter
+    public void setMinimumSeverity(Severity minimumSeverity) {
+        this.minimumSeverity = minimumSeverity != null ? minimumSeverity : Severity.LOW;
+    }
+    public Severity getMinimumSeverity() {
+        return minimumSeverity != null ? minimumSeverity : Severity.LOW;
     }
 
     @DataBoundSetter
@@ -286,7 +329,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                 FilePath localPath = null;
                 if(path.isRemote()) {
                     // copy locally
-                    localPath = new FilePath(File.createTempFile(fileName, ".apk"));
+                    localPath = new FilePath(File.createTempFile(fileName, null));
                     localPath.copyFrom(path);
                 }
                 else {
@@ -294,7 +337,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                 }
 
                 File file = new File(localPath.getRemote());
-                log(console, "Uploading " + file.getName() + " (" + file.getAbsolutePath() + ") to " + effectiveEndpoint);
+                log(console, "Uploading " + fileName + " (" + file.getAbsolutePath() + ") to " + effectiveEndpoint);
 
                 String branchName = (envVars.get("BRANCH_NAME") != null) ? envVars.get("BRANCH_NAME") : "";
                 String buildNumber = (envVars.get("BUILD_NUMBER") != null) ? envVars.get("BUILD_NUMBER") : "";
@@ -305,7 +348,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         .addFormDataPart("ciToolName", toolName)
                         .addFormDataPart("branchName", branchName)
                         .addFormDataPart("buildNumber", buildNumber)
-                        .addFormDataPart("buildFile", file.getName(), RequestBody.create(file, MediaType.parse("multipart/form-data")));
+                        .addFormDataPart("buildFile", fileName, RequestBody.create(file, MediaType.parse("multipart/form-data")));
                 RequestBody requestBody = multipartBody.build();
                 Call<ResponseBody> uploadCall = service.upload(authToken, requestBody);
 
@@ -503,63 +546,70 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                             else {
                                 // get the actual report
                                 log(console, "Retrieving report for assessment " + assessmentId);
-                                String reportFormatString = reportFormat.getDescription().toLowerCase();
+                                String requestedReportFormatString = getReportFormat().getDescription().toLowerCase();
+                                String evalReportFormatString = "json";
+                                JsonObject evalReport = null;
 
-                                Call<ResponseBody> reportCall = service.downloadReport(assessmentId, reportFormatString, authToken);
-                                Response<ResponseBody> reportResponse = reportCall.execute();
-                                ResponseBody reportResponseBody = reportResponse.body();
+                                try {
+                                    String jsonReportContent = downloadReportContent(service, assessmentId, evalReportFormatString, authToken, console);
+                                    if(jsonReportContent != null) {
+                                        evalReport = JsonParser.parseString(jsonReportContent).getAsJsonObject();
+                                        log(console, "Parsed evaluation report JSON for assessment " + assessmentId);
 
-                                if(reportResponse.isSuccessful() && reportResponseBody != null) {
-                                    boolean reportSuccess = false;
-                                    long bytesWritten = 0;
-                                    File reportFile = File.createTempFile("zScan-report-", "." + reportFormatString);
-                                    try( InputStream inputStream = reportResponseBody.byteStream(); OutputStream outputStream = new FileOutputStream(reportFile); ) {
-                                        byte[] buffer = new byte[4096];
-
-                                        while(true) {
-                                            int read = inputStream.read(buffer);
-                                            if( read == -1 ) {
-                                                break;
-                                            }
-
-                                            outputStream.write(buffer, 0, read);
-                                            bytesWritten += read;
+                                        if("json".equals(requestedReportFormatString)) {
+                                            saveReportContentToWorkspace(jsonReportContent, assessmentId, requestedReportFormatString, reportFileName, workspace, console);
                                         }
-
-                                        outputStream.flush();
-                                        reportSuccess = true;
-                                    }
-                                    catch(Exception e) {
-                                        log(console, "Unable to write to a temporary file " + reportFile.getAbsolutePath() + ": " + e.getLocalizedMessage());
-                                        run.setResult(Result.UNSTABLE);
-                                    }
-
-                                    if(reportSuccess && bytesWritten > 0) {
-                                        // append assessment id to the filename
-                                        String effectiveReportFileName = (reportFileName.isEmpty()) ? 
-                                                "zScan-report-" + assessmentId + "." + reportFormatString :
-                                                FilenameUtils.removeExtension(reportFileName) + "-" + assessmentId + "." + FilenameUtils.getExtension(reportFileName);
-
-                                        try {
-                                            // copy the report to the workspace
-                                            FilePath reportPath = new FilePath(workspace, effectiveReportFileName);
-                                            reportPath.copyFrom(new FilePath(reportFile));
-                                            log(console, "Written " + bytesWritten + " bytes to file " + reportPath.getRemote());
-                                        }
-                                        catch(Exception e) {
-                                            log(console, "Unable to copy report to workspace: " + e.getLocalizedMessage());
-                                            run.setResult(Result.UNSTABLE);
-                                        }
-                                    }
-                                    
-                                    // delete the report
-                                    if(!reportFile.delete()) {
-                                        log(console, "Unable to delete temporary file " + reportFile.getAbsolutePath());
                                     }
                                 }
-                                else {
-                                    log(console, "Report failed to download: HTTP" + reportResponse.code() + ": " + reportCall.request().url());
+                                catch(Exception e) {
+                                    log(console, "Unable to download or parse evaluation JSON report: " + e.getLocalizedMessage());
                                     run.setResult(Result.UNSTABLE);
+                                }
+
+                                if(!"json".equals(requestedReportFormatString)) {
+                                    try {
+                                        String reportContent = downloadReportContent(service, assessmentId, requestedReportFormatString, authToken, console);
+                                        if(reportContent != null) {
+                                            saveReportContentToWorkspace(reportContent, assessmentId, requestedReportFormatString, reportFileName, workspace, console);
+                                        }
+                                    }
+                                    catch(Exception e) {
+                                        log(console, "Unable to download or save requested report format " + requestedReportFormatString + ": " + e.getLocalizedMessage());
+                                        run.setResult(Result.UNSTABLE);
+                                    }
+                                }
+
+                                if(evalReport != null) {
+                                    ScanSummary summary = summarizeScanReport(evalReport);
+                                    if(summary != null) {
+                                        log(console, "Scan Summary for assessment " + assessmentId + ":");
+                                        for(Severity severity : Severity.values()) {
+                                            int total = summary.getTotalForSeverity(severity);
+                                            int unaccepted = summary.getUnacceptedForSeverity(severity);
+                                            if(total > 0 | unaccepted > 0) {
+                                                log(console, "  " + severity.getDescription() + ": total=" + total + ", unaccepted=" + unaccepted);
+                                            }
+                                        }
+
+                                        if(getEvaluateBuildStatusOnScanFindings()) {
+                                            if(summary.matchesCriteria(getScanEvaluationMode(), getMinimumSeverity())) {
+                                                Result action = getScanStatusAction() == ScanStatusAction.FAILURE ? Result.FAILURE : Result.UNSTABLE;
+                                                if(run.getResult() == null || Result.SUCCESS.equals(run.getResult()) || Result.UNSTABLE.equals(run.getResult())) {
+                                                    run.setResult(action);
+                                                }
+                                                log(console, "Build status set to " + action.toString() + " based on scan evaluation criteria.");
+                                            }
+                                            else {
+                                                log(console, "Scan evaluation criteria not met for assessment " + assessmentId + ".");
+                                            }
+                                        }
+                                        else {
+                                            log(console, "Build status evaluation is disabled for scan findings.");
+                                        }
+                                    }
+                                    else {
+                                        log(console, "Unable to summarize scan results for assessment " + assessmentId + ".");
+                                    }
                                 }
                             }
                         }
@@ -597,7 +647,263 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
             }
         }
         log(console, totalCount + " file(s) were uploaded.");
-        run.setResult(Result.SUCCESS);
+        if (run.getResult() == null || Result.SUCCESS.equals(run.getResult())) {
+            run.setResult(Result.SUCCESS);
+        }
+    }
+
+    private String downloadReportContent(UploadPluginService service, String assessmentId, String reportFormat, String authToken, PrintStream console) throws IOException {
+        Call<ResponseBody> reportCall = service.downloadReport(assessmentId, reportFormat, authToken);
+        Response<ResponseBody> reportResponse = reportCall.execute();
+        ResponseBody reportResponseBody = reportResponse.body();
+        if(reportResponse.isSuccessful() && reportResponseBody != null) {
+            try(InputStream inputStream = reportResponseBody.byteStream()) {
+                return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            }
+        }
+        else {
+            log(console, "Report failed to download: HTTP" + reportResponse.code() + ": " + reportCall.request().url());
+        }
+        return null;
+    }
+
+    private void saveReportContentToWorkspace(String content, String assessmentId, String reportFormat, String reportFileName, FilePath workspace, PrintStream console) throws IOException, InterruptedException {
+        String extension = reportFormat;
+        File reportFile = File.createTempFile("zScan-report-", "." + extension);
+        try (OutputStream outputStream = new FileOutputStream(reportFile)) {
+            outputStream.write(content.getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+        }
+
+        String effectiveReportFileName = (reportFileName == null || reportFileName.isEmpty()) ?
+                "zScan-report-" + assessmentId + "." + extension :
+                FilenameUtils.removeExtension(reportFileName) + "-" + assessmentId + "." + FilenameUtils.getExtension(reportFileName);
+
+        try {
+            FilePath reportPath = new FilePath(workspace, effectiveReportFileName);
+            reportPath.copyFrom(new FilePath(reportFile));
+            log(console, "Written " + reportFile.length() + " bytes to file " + reportPath.getRemote());
+        }
+        finally {
+            if(!reportFile.delete()) {
+                log(console, "Unable to delete temporary file " + reportFile.getAbsolutePath());
+            }
+        }
+    }
+
+    private ScanSummary summarizeScanReport(JsonObject report) {
+        ScanSummary summary = new ScanSummary();
+
+        if(report == null || report.isJsonNull()) {
+            return summary;
+        }
+
+        if(report.has("findings") && report.get("findings").isJsonArray()) {
+            for(JsonElement element : report.getAsJsonArray("findings")) {
+                if(element.isJsonObject()) {
+                    summary.addFinding(parseSeverity(element.getAsJsonObject()), parseIsAcceptedFinding(element.getAsJsonObject()));
+                }
+            }
+            return summary;
+        }
+
+        if(report.has("issues") && report.get("issues").isJsonArray()) {
+            for(JsonElement element : report.getAsJsonArray("issues")) {
+                if(element.isJsonObject()) {
+                    summary.addFinding(parseSeverity(element.getAsJsonObject()), parseIsAcceptedFinding(element.getAsJsonObject()));
+                }
+            }
+            return summary;
+        }
+
+        if(report.has("runs") && report.get("runs").isJsonArray()) {
+            for(JsonElement runElement : report.getAsJsonArray("runs")) {
+                if(runElement.isJsonObject()) {
+                    JsonObject runObject = runElement.getAsJsonObject();
+                    if(runObject.has("results") && runObject.get("results").isJsonArray()) {
+                        for(JsonElement resultElement : runObject.getAsJsonArray("results")) {
+                            if(resultElement.isJsonObject()) {
+                                summary.addFinding(parseSeverity(resultElement.getAsJsonObject()), parseIsAcceptedFinding(resultElement.getAsJsonObject()));
+                            }
+                        }
+                    }
+                }
+            }
+            return summary;
+        }
+
+        return summary;
+    }
+
+    private Severity parseSeverity(JsonObject finding) {
+        if(finding == null || finding.isJsonNull()) {
+            return Severity.UNKNOWN;
+        }
+
+        if(finding.has("severity") && finding.get("severity").isJsonPrimitive()) {
+            return Severity.fromString(finding.get("severity").getAsString());
+        }
+
+        if(finding.has("severityOrdinal") && finding.get("severityOrdinal").isJsonPrimitive()) {
+            try {
+                return Severity.fromOrdinal(finding.get("severityOrdinal").getAsInt());
+            }
+            catch(NumberFormatException ignored) {
+                // fall through to other fields
+            }
+        }
+
+        return Severity.UNKNOWN;
+    }
+
+    private boolean parseIsAcceptedFinding(JsonObject finding) {
+        if(finding == null || finding.isJsonNull()) {
+            return false;
+        }
+
+        if(finding.has("accepted_status") && finding.get("accepted_status").isJsonPrimitive()) {
+            return finding.get("accepted_status").getAsBoolean();
+        }
+
+        return true;
+    }
+
+    private static class ScanSummary {
+        private final Map<Severity, Integer> totalBySeverity = new HashMap<>();
+        private final Map<Severity, Integer> unacceptedBySeverity = new HashMap<>();
+
+        public void addFinding(Severity severity, boolean isAccepted) {
+            totalBySeverity.put(severity, totalBySeverity.getOrDefault(severity, 0) + 1);
+            if(!isAccepted) {
+                unacceptedBySeverity.put(severity, unacceptedBySeverity.getOrDefault(severity, 0) + 1);
+            }
+        }
+
+        public int getTotalForSeverity(Severity severity) {
+            return totalBySeverity.getOrDefault(severity, 0);
+        }
+
+        public int getUnacceptedForSeverity(Severity severity) {
+            return unacceptedBySeverity.getOrDefault(severity, 0);
+        }
+
+        public boolean matchesCriteria(ScanEvaluationMode mode, Severity threshold) {
+            for(Severity severity : Severity.values()) {
+                if(severity == Severity.BEST_PRACTICES) {
+                    continue;
+                }
+                if(severity.getRank() < threshold.getRank()) {
+                    continue;
+                }
+                int count = (mode == ScanEvaluationMode.UNACCEPTED_FINDING_ONLY) ? getUnacceptedForSeverity(severity) : getTotalForSeverity(severity);
+                if(count > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    public static enum ScanStatusAction {
+        UNSTABLE("Unstable"),
+        FAILURE("Failure");
+
+        private final String description;
+
+        ScanStatusAction(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    public static enum ScanEvaluationMode {
+        ANY_FINDING("Any findings"),
+        UNACCEPTED_FINDING_ONLY("Unaccepted findings only");
+
+        private final String description;
+
+        ScanEvaluationMode(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    public static enum Severity {
+        CRITICAL(4, "Critical"),
+        HIGH(3, "High"),
+        MEDIUM(2, "Medium"),
+        LOW(1, "Low"),
+        INFORMATIONAL(0, "Informational"),
+        BEST_PRACTICES(-2, "Best Practices"),
+        UNKNOWN(-1, "Unknown");
+
+        private final int rank;
+        private final String description;
+
+        Severity(int rank, String description) {
+            this.rank = rank;
+            this.description = description;
+        }
+
+        public int getRank() {
+            return rank;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public static Severity fromString(String value) {
+            if(value == null) {
+                return UNKNOWN;
+            }
+            switch(value.trim().toLowerCase()) {
+                case "critical":
+                case "crit":
+                    return CRITICAL;
+                case "high":
+                    return HIGH;
+                case "medium":
+                case "med":
+                    return MEDIUM;
+                case "low":
+                    return LOW;
+                case "informational":
+                case "info":
+                    return INFORMATIONAL;
+                case "best practices":
+                case "best_practices":
+                case "best-practices":
+                    return BEST_PRACTICES;
+                default:
+                    return UNKNOWN;
+            }
+        }
+
+        public static Severity fromOrdinal(int ordinal) {
+            switch(ordinal) {
+                case 5:
+                    return BEST_PRACTICES;
+                case 4:
+                    return CRITICAL;
+                case 3:
+                    return HIGH;
+                case 2:
+                    return MEDIUM;
+                case 1:
+                    return LOW;
+                case 0:
+                    return INFORMATIONAL;
+                default:
+                    return UNKNOWN;
+            }
+        }
     }
 
     @Override

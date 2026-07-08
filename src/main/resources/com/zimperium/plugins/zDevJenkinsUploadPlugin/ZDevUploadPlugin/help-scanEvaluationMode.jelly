@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>Choose whether status changes should be triggered by <strong>any finding</strong> or only by <strong>new findings</strong> that are not already accepted by zScan.</div>

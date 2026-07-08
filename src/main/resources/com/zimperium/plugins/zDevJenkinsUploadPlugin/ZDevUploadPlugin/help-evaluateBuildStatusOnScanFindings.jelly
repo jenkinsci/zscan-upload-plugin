@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>Enable build-status evaluation for scan findings when running with the wait for report option. If enabled, selected criteria can mark the build as <strong>UNSTABLE</strong> or <strong>FAILURE</strong> after upload results are processed.</div>

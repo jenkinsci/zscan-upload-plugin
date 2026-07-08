@@ -37,7 +37,7 @@
     </f:entry>
 
     <f:block name="Report Generation">
-        <f:optionalBlock title="Wait for Report" inline="true" field="waitForReport">
+        <f:optionalBlock title="Wait for Report" inline="true" field="waitForReport" checked="${instance == null ? false : instance.getWaitForReport()}">
             <f:entry title="Report Format" field="reportFormat">
                 <f:enum default="JSON">
                     ${it.getDescription()}
@@ -46,6 +46,23 @@
             <f:entry title="Report File Name" field="reportFileName">
                 <f:textbox default="${descriptor.getDefaultReportFileName()}" />
             </f:entry>
+            <f:optionalBlock title="Set Build Status based on scan findings" field="evaluateBuildStatusOnScanFindings" inline="true" checked="${instance == null ? false : instance.getEvaluateBuildStatusOnScanFindings()}">
+                <f:entry title="Build status when criteria are met" field="scanStatusAction">
+                    <f:enum default="UNSTABLE">
+                        ${it.getDescription()}
+                    </f:enum>
+                </f:entry>
+                <f:entry title="Evaluation Mode" field="scanEvaluationMode">
+                    <f:enum default="ANY_FINDING">
+                        ${it.getDescription()}
+                    </f:enum>
+                </f:entry>
+                <f:entry title="Minimum Severity for Evaluation" field="minimumSeverity">
+                    <f:enum default="LOW">
+                        ${it.getDescription()}
+                    </f:enum>
+                </f:entry>
+            </f:optionalBlock>
         </f:optionalBlock>
     </f:block>
 

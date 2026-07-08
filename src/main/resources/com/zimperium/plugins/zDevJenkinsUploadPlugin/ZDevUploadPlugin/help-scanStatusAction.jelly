@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>Select the build status to apply when scan evaluation criteria are met. Choose <strong>Unstable</strong> or <strong>Failure</strong> to escalate the Jenkins job state after report evaluation.</div>
