@@ -64,6 +64,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
     public final static Result DEFAULT_STEP_RESULT = Result.FAILURE;
     public final static int MAX_FILES_UPLOAD = 5;
+    public final static int MAX_RETRIES = 3;
     public final static String DEFAULT_REPORT_FILE = "zscan-report.json";
     public final static String DEFAULT_TEAM_NAME = "Default";
     public final static Integer DEFAULT_REPORT_TIMEOUT_MINUTES = 30;
@@ -350,13 +351,22 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                         .addFormDataPart("buildNumber", buildNumber)
                         .addFormDataPart("buildFile", fileName, RequestBody.create(file, MediaType.parse("multipart/form-data")));
                 RequestBody requestBody = multipartBody.build();
-                Call<ResponseBody> uploadCall = service.upload(authToken, requestBody);
 
                 long start = System.currentTimeMillis();
-                Response<ResponseBody> uploadResponse = uploadCall.execute();
+                Response<ResponseBody> uploadResponse = null;
+                for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                    Call<ResponseBody> uploadCall = service.upload(authToken, requestBody);
+                    uploadResponse = uploadCall.execute();
+                    if (uploadResponse.isSuccessful() || !shouldRetryForUpload(uploadResponse.code()) || attempt >= MAX_RETRIES) {
+                        break;
+                    }
+
+                    log(console, "Transient upload error (HTTP " + uploadResponse.code() + ") while uploading " + fileName + ". Retry " + attempt + "/" + MAX_RETRIES + "...");
+                    waitBeforeRetry(console, "upload");
+                }
                 long end = System.currentTimeMillis();
 
-                if (uploadResponse.isSuccessful()) {
+                if (uploadResponse != null && uploadResponse.isSuccessful()) {
                     log(console, "Successfully uploaded " + fileName + " to " + effectiveEndpoint + " (" + (end - start) + "ms)");
                     try(ResponseBody uploadResponseBody = uploadResponse.body()) {
                         // we're inside the try() block; exceptions will be caught  
@@ -600,7 +610,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                                 log(console, "Build status set to " + action.toString() + " based on scan evaluation criteria.");
                                             }
                                             else {
-                                                log(console, "Scan evaluation criteria not met for assessment " + assessmentId + ".");
+                                                log(console, "Build status gating criteria not met for assessment " + assessmentId + ".");
                                             }
                                         }
                                         else {
@@ -625,8 +635,9 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                     totalCount++;
                 } else {
-                    log(console, "An error (HTTP " + uploadResponse.code() + ") occurred while trying to upload " + fileName + " to " + effectiveEndpoint);
-                    ResponseBody uploadResponseBody = uploadResponse.errorBody();
+                    int uploadStatusCode = uploadResponse != null ? uploadResponse.code() : -1;
+                    log(console, "An error (HTTP " + uploadStatusCode + ") occurred while trying to upload " + fileName + " to " + effectiveEndpoint);
+                    ResponseBody uploadResponseBody = uploadResponse != null ? uploadResponse.errorBody() : null;
                     if(uploadResponseBody != null) {
                         log(console, "Error message: " + uploadResponseBody.string());
                     }
@@ -652,17 +663,43 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
         }
     }
 
-    private String downloadReportContent(UploadPluginService service, String assessmentId, String reportFormat, String authToken, PrintStream console) throws IOException {
-        Call<ResponseBody> reportCall = service.downloadReport(assessmentId, reportFormat, authToken);
-        Response<ResponseBody> reportResponse = reportCall.execute();
-        ResponseBody reportResponseBody = reportResponse.body();
-        if(reportResponse.isSuccessful() && reportResponseBody != null) {
+    public static boolean shouldRetryForUpload(int responseCode) {
+        return responseCode == 500 || responseCode == 502 || responseCode == 503 || responseCode == 504;
+    }
+
+    public static boolean shouldRetryForDownload(int responseCode) {
+        return responseCode == 404;
+    }
+
+    private void waitBeforeRetry(PrintStream console, String operation) throws InterruptedException {
+        log(console, "Waiting " + (checkInterval / 1000) + "s before retrying " + operation + "...");
+        synchronized (this) {
+            wait(checkInterval);
+        }
+    }
+
+    private String downloadReportContent(UploadPluginService service, String assessmentId, String reportFormat, String authToken, PrintStream console) throws IOException, InterruptedException {
+        Response<ResponseBody> reportResponse = null;
+        Call<ResponseBody> reportCall = null;
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            reportCall = service.downloadReport(assessmentId, reportFormat, authToken);
+            reportResponse = reportCall.execute();
+            if (reportResponse.isSuccessful() || !shouldRetryForDownload(reportResponse.code()) || attempt >= MAX_RETRIES) {
+                break;
+            }
+
+            log(console, "Report download returned HTTP " + reportResponse.code() + ". Retry " + attempt + "/" + MAX_RETRIES + "...");
+            waitBeforeRetry(console, "report download");
+        }
+
+        ResponseBody reportResponseBody = reportResponse != null ? reportResponse.body() : null;
+        if (reportResponse != null && reportResponse.isSuccessful() && reportResponseBody != null) {
             try(InputStream inputStream = reportResponseBody.byteStream()) {
                 return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             }
         }
         else {
-            log(console, "Report failed to download: HTTP" + reportResponse.code() + ": " + reportCall.request().url());
+            log(console, "Report failed to download: HTTP" + (reportResponse != null ? reportResponse.code() : "?") + ": " + (reportCall != null ? reportCall.request().url() : "unknown"));
         }
         return null;
     }
