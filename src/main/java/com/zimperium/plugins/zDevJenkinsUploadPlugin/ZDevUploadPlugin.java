@@ -27,7 +27,7 @@ import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import okhttp3.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.Symbol;
 import org.apache.commons.io.FilenameUtils;
 import org.kohsuke.stapler.AncestorInPath;
