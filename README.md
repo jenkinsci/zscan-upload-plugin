@@ -19,11 +19,15 @@ and the artifact `zscan-upload.hpi` will have been created in the `target` direc
 
 ### Other Maven goals you may find useful when building this plugin
 
+```mvn test```
+
+executes unit tests. The tests verify specific functionality without performing end-to-end uploads.
+
 The Maven sub-goals provided by the HPI plugin are documented here:
 
 [Jenkins Maven Plugin Goals](https://jenkinsci.github.io/maven-hpi-plugin/plugin-info.html)
 
-For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts a test instance of Jenkins with the plugin preloaded.
+For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts a test instance of Jenkins with the plugin preloaded.  This is useful for verifying plugin functionality before commiting code to the repository.
 
 ## Installation
 
