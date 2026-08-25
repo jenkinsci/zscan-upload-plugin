@@ -88,6 +88,7 @@
             ** We use 2.516 for now
         -->
         <jenkins.baseline>2.516</jenkins.baseline>
+        <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
         <jenkins.version>${jenkins.baseline}.3</jenkins.version>
         <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
         <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
