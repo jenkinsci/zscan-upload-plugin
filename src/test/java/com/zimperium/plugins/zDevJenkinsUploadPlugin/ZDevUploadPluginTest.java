@@ -28,7 +28,10 @@ class ZDevUploadPluginTest {
     @Test
     void reportDownloadRetriesForNotFound() {
         assertTrue(ZDevUploadPlugin.shouldRetryForDownload(404));
-        assertFalse(ZDevUploadPlugin.shouldRetryForDownload(500));
+        assertTrue(ZDevUploadPlugin.shouldRetryForDownload(500));
+        assertTrue(ZDevUploadPlugin.shouldRetryForDownload(502));
+        assertTrue(ZDevUploadPlugin.shouldRetryForDownload(503));
+        assertTrue(ZDevUploadPlugin.shouldRetryForDownload(504));
         assertFalse(ZDevUploadPlugin.shouldRetryForDownload(400));
         assertEquals(3, ZDevUploadPlugin.MAX_RETRIES);
     }

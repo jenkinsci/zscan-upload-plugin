@@ -668,7 +668,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
     }
 
     public static boolean shouldRetryForDownload(int responseCode) {
-        return responseCode == 404;
+        return responseCode == 404 || shouldRetryForUpload(responseCode);
     }
 
     private void waitBeforeRetry(PrintStream console, String operation) throws InterruptedException {
