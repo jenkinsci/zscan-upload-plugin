@@ -6,7 +6,7 @@ zScan is part of the [Zimperium MAPS](https://www.zimperium.com/mobile-app-prote
 
 ## Pre-requisites
 
-This project requires Java 21 or higher to build and run, as lower versions are no longer supported by Jenkins.
+This project now targets Java 21 LTS for builds and runtime, which is the current long-term support target for this plugin.
 
 A Zimperium Console account with a zScan (MAPS) license is required.  In your console, head over to the *Authorizations* tab in the *Account Management* section and generate a new API key that at least has the permissions of `zScan Builds - Upload`.  If assessment reports are required, the `zScan Assessments - View` permission is also necessary.
 
@@ -19,11 +19,15 @@ and the artifact `zscan-upload.hpi` will have been created in the `target` direc
 
 ### Other Maven goals you may find useful when building this plugin
 
+```mvn test```
+
+executes unit tests. The tests verify specific functionality without performing end-to-end uploads.
+
 The Maven sub-goals provided by the HPI plugin are documented here:
 
 [Jenkins Maven Plugin Goals](https://jenkinsci.github.io/maven-hpi-plugin/plugin-info.html)
 
-For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts a test instance of Jenkins with the plugin preloaded.
+For example, ```mvn hpi:hpi``` builds the `.hpi` file, while ```mvn hpi:run``` starts a test instance of Jenkins with the plugin preloaded.  This is useful for verifying plugin functionality before commiting code to the repository.
 
 ## Installation
 
@@ -73,15 +77,29 @@ Opposite of above, provides ability to specify patterns to exclude files, multip
 
 #### Wait for Report
 
-If checked, the plugin will wait for an assessment report after uploading each binary. Reports take about 10 minutes to generate and the build step execution is paused while waiting. Report generation times out after 20 minutes to prevent 'stuck builds'.  If unchecked, the execution will move on to the next binary.  Reports can also be obtained from the zScan console
+If checked, the plugin will wait for an assessment report after uploading each binary. Reports take about 10 minutes to generate and the build step execution is paused while waiting. Report generation times out after 20 minutes to prevent 'stuck builds'. If unchecked, the execution will move on to the next binary. Reports can also be obtained from the zScan console.
+
+When report waiting is enabled, the plugin evaluates scan findings and can optionally set the build status to `UNSTABLE` or `FAILURE` based on configured criteria.
 
 #### Report Format
 
-Specifies the format for the assessment report.  For more information on SARIF, please see [OASIS Open](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html).
+Specifies the format for the assessment report. For more information on SARIF, please see [OASIS Open](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html).
 
 #### Report File Name
 
 Filename(s) for the assessment report(s). Assessment ID is appended to the filename to prevent multiple reports overwriting one another.
+
+#### Build Status on Scan Criteria
+
+When `Wait for Report` is enabled, the plugin can automatically mark the build `UNSTABLE` or `FAILURE` when the configured scan evaluation criteria are met.
+
+#### Evaluation Mode
+
+Choose whether the build status should be based on `Any Findings` or only `Unaccepted Findings` that are not already accepted in the zScan Console.
+
+#### Minimum Severity for Evaluation
+
+Only findings with this severity or higher will be considered when evaluating scan criteria.
 
 ### Advanced Configuration
 

@@ -1,0 +1,2 @@
+<?jelly escape-by-default='true'?>
+<div>Only findings at or above the selected severity level will be considered when evaluating the scan criteria for build status changes.</div>
