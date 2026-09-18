@@ -591,7 +591,7 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
 
                                 if(evalReport != null) {
                                     ScanSummary summary = summarizeScanReport(evalReport);
-                                    if(summary != null) {
+                                    try {
                                         log(console, "Scan Summary for assessment " + assessmentId + ":");
                                         for(Severity severity : Severity.values()) {
                                             int total = summary.getTotalForSeverity(severity);
@@ -617,8 +617,8 @@ public class ZDevUploadPlugin extends Recorder implements SimpleBuildStep{
                                             log(console, "Build status evaluation is disabled for scan findings.");
                                         }
                                     }
-                                    else {
-                                        log(console, "Unable to summarize scan results for assessment " + assessmentId + ".");
+                                    catch(Exception e) {
+                                        log(console, "Unable to summarize scan results for assessment " + assessmentId + ": " + e.getLocalizedMessage());
                                     }
                                 }
                             }
